@@ -73,7 +73,7 @@ export function HomeHero() {
             <div className={styles.actions}>
               <Link to="/signup" className={styles.primaryBtn}>
                 <ArrowRight size={18} />
-                Get Started
+                Try as Guest
               </Link>
               <Link to="/login" className={styles.secondaryBtn}>
                 Sign In
