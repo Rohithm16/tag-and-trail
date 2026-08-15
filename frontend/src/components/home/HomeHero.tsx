@@ -1,9 +1,10 @@
 import { lazy, Suspense, useState, type CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import type { IconType } from 'react-icons';
 import { FaDiscord, FaInstagram, FaLinkedin, FaTelegram, FaWhatsapp } from 'react-icons/fa';
 import { SiGmail, SiImessage } from 'react-icons/si';
+import { useAuth } from '../../context/useAuth';
 import styles from './HomeHero.module.css';
 
 const Dithering = lazy(() =>
@@ -39,6 +40,13 @@ const floatingIcons: FloatingIcon[] = [
 
 export function HomeHero() {
   const [isHovered, setIsHovered] = useState(false);
+  const { loginAsGuest } = useAuth();
+  const navigate = useNavigate();
+
+  const handleGuest = () => {
+    loginAsGuest();
+    navigate('/dashboard');
+  };
 
   return (
     <main className={styles.page}>
@@ -71,10 +79,10 @@ export function HomeHero() {
               Automatically process WhatsApp documents and links with malware detection, smart tagging, and fast retrieval.
             </p>
             <div className={styles.actions}>
-              <Link to="/signup" className={styles.primaryBtn}>
+              <button onClick={handleGuest} className={styles.primaryBtn}>
                 <ArrowRight size={18} />
                 Try as Guest
-              </Link>
+              </button>
               <Link to="/login" className={styles.secondaryBtn}>
                 Sign In
               </Link>

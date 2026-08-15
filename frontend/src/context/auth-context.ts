@@ -1,10 +1,23 @@
 import { createContext } from 'react';
+import type { Document } from '../api/client';
+
+export interface AuthUser {
+  email: string;
+  name: string | null;
+}
 
 export interface AuthContextType {
-  user: { email: string } | null;
-  login: (email: string, password: string) => void;
-  signup: (email: string, password: string) => void;
+  user: AuthUser | null;
+  token: string | null;
+  isGuest: boolean;
+  /** In-memory docs for guest session */
+  guestDocs: Document[];
+  addGuestDoc: (doc: Document) => void;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name?: string) => Promise<void>;
+  loginAsGuest: () => void;
   logout: () => void;
+  updateProfile: (name: string, email: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_user, hash_password, verify_password, create_access_token
 from app.database.session import get_db
 from app.models.user import User
-from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse, UserOut
+from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse, UserOut, UpdateProfileRequest
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -39,4 +39,21 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_profile(
+    body: UpdateProfileRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if body.name is not None:
+        current_user.name = body.name or None
+    if body.email is not None and body.email != current_user.email:
+        if db.query(User).filter(User.email == body.email, User.id != current_user.id).first():
+            raise HTTPException(status_code=409, detail="Email already in use")
+        current_user.email = body.email
+    db.commit()
+    db.refresh(current_user)
     return current_user

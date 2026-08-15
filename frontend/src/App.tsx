@@ -3,18 +3,20 @@ import { AuthenticationDialog } from './components/auth/AuthenticationDialog';
 import { AppBackground } from './components/layout/AppBackground';
 import { AuthProvider } from './context/AuthProvider';
 import { AuthenticatedRoute } from './routes/AuthenticatedRoute';
-import { Layout } from './components/layout/Layout';                    // ← add this
-import { DashboardPage } from './pages/DashboardPage';                  // ← add this
-import { UploadPage } from './pages/UploadPage';                        // ← add this
-import { TrashPage } from './pages/TrashPage';                          // ← add this
-import { ConnectWhatsAppPage } from './pages/ConnectWhatsAppPage';      // ← add this
-import { SettingsPage } from './pages/SettingsPage';                    // ← add this
+import { Layout } from './components/layout/Layout';
+import { DashboardPage } from './pages/DashboardPage';
+import { UploadPage } from './pages/UploadPage';
+import { TrashPage } from './pages/TrashPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { HomePage } from './pages/HomePage';
 
 const AppContent = () => {
   const location = useLocation();
   const authMode =
-    location.pathname === '/signup' ? 'signup' : location.pathname === '/login' ? 'signin' : null;
+    location.pathname === '/signup' ? 'signup'
+    : location.pathname === '/login' ? 'signin'
+    : null;
+    
 
   return (
     <>
@@ -30,27 +32,19 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public routes */}
+          {/* Public */}
           <Route path="/" element={<AppContent />} />
           <Route path="/signup" element={<AppContent />} />
           <Route path="/login" element={<AppContent />} />
 
-          {/* Authenticated routes with sidebar */}
-          <Route
-            element={
-              <AuthenticatedRoute>
-                <Layout />
-              </AuthenticatedRoute>
-            }
-          >
+          {/* Authenticated */}
+          <Route element={<AuthenticatedRoute><Layout /></AuthenticatedRoute>}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/trash" element={<TrashPage />} />
-            <Route path="/whatsapp" element={<ConnectWhatsAppPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
 
-          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

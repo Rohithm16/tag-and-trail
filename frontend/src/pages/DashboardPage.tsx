@@ -1,92 +1,92 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
-import {
-  AlertTriangle,
-  ArrowRight,
-  Calendar,
-  File,
-  Link as LinkIcon,
-  Search,
-} from 'lucide-react';
+import { Calendar, File, Link as LinkIcon, Search, Trash2 } from 'lucide-react';
 import styles from '../App.module.css';
+import { api, type Document, type Stats } from '../api/client';
+import { useAuth } from '../context/useAuth';
+import { uploadEventBus } from './UploadPage';
 
-type ActivityType = 'pdf' | 'link';
-type FilterType = 'all' | ActivityType | 'malicious';
+type FilterType = 'all' | 'pdf' | 'link' | 'malicious';
 
-type ActivityItem = {
-  id: number;
-  title: string;
-  type: ActivityType;
-  tags: string[];
-  date: string;
-  isMalicious: boolean;
-};
-
-const stats = {
-  totalIndexed: 342,
-  links: 128,
-  documents: 214,
-  types: {
-    open: 156,
-    private: 142,
-    malicious: 44,
-  },
-};
-
-const recentActivity: ActivityItem[] = [
-  { id: 1, title: 'Project Proposal', type: 'pdf', tags: ['work', 'proposal'], date: '2025-03-20', isMalicious: false },
-  { id: 2, title: 'Research Paper', type: 'link', tags: ['research', 'AI'], date: '2025-03-19', isMalicious: false },
-  { id: 3, title: 'Suspicious Link', type: 'link', tags: ['spam', 'malware'], date: '2025-03-18', isMalicious: true },
-  { id: 4, title: 'Meeting Notes', type: 'pdf', tags: ['meeting', 'notes'], date: '2025-03-17', isMalicious: false },
-];
-
-const filterOptions = [
+const filterOptions: { label: string; value: FilterType }[] = [
   { label: 'All', value: 'all' },
   { label: 'PDF', value: 'pdf' },
   { label: 'Link', value: 'link' },
   { label: 'Malicious', value: 'malicious' },
 ];
 
+function computeStats(docs: Document[]): Stats {
+  const total = docs.length;
+  const links = docs.filter((d) => d.source_type === 'link').length;
+  const malicious = docs.filter((d) => d.is_malicious).length;
+  return { total_indexed: total, links, documents: total - links, open_count: total - malicious, private_count: 0, malicious_count: malicious };
+}
+
 export function DashboardPage() {
+  const { isGuest, guestDocs } = useAuth();
+  const [docs, setDocs] = useState<Document[]>([]);
+  const [stats, setStats] = useState<Stats>({ total_indexed: 0, links: 0, documents: 0, open_count: 0, private_count: 0, malicious_count: 0 });
+  const [initialLoading, setInitialLoading] = useState(!isGuest);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
 
-  const filteredActivity = useMemo(() => {
-    const normalizedSearchTerm = searchTerm.trim().toLowerCase();
-    return recentActivity.filter((item) => {
-      const matchesSearch =
-        normalizedSearchTerm.length === 0 ||
-        item.title.toLowerCase().includes(normalizedSearchTerm) ||
-        item.tags.some((tag) => tag.toLowerCase().includes(normalizedSearchTerm));
-      const matchesType =
-        filterType === 'all' ||
-        item.type === filterType ||
-        (filterType === 'malicious' && item.isMalicious);
+  // Initial load
+  useEffect(() => {
+    if (isGuest) {
+      setDocs(guestDocs);
+      setStats(computeStats(guestDocs));
+      setInitialLoading(false);
+      return;
+    }
+    // Load data without blocking — show empty state immediately, fill in when ready
+    setInitialLoading(false); // Show page immediately
+    api.documents.list()
+      .then((d) => { setDocs(d); setStats(computeStats(d)); })
+      .catch(console.error);
+  }, [isGuest]);
+
+  // Sync guest docs when they change
+  useEffect(() => {
+    if (isGuest) {
+      setDocs(guestDocs);
+      setStats(computeStats(guestDocs));
+    }
+  }, [guestDocs, isGuest]);
+
+  // Listen for uploads completing (from UploadPage event bus)
+  useEffect(() => {
+    if (isGuest) return; // guest handled via guestDocs state
+    const unsub = uploadEventBus.on((newDoc) => {
+      setDocs((prev) => {
+        const updated = [newDoc, ...prev.filter((d) => d.id !== newDoc.id)];
+        setStats(computeStats(updated));
+        return updated;
+      });
+    });
+    return unsub;
+  }, [isGuest]);
+
+  const filtered = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return docs.filter((item) => {
+      const matchesSearch = !q || (item.title ?? '').toLowerCase().includes(q) || item.tags.some((t) => t.toLowerCase().includes(q));
+      const matchesType = filterType === 'all' || item.source_type === filterType || (filterType === 'malicious' && item.is_malicious);
       return matchesSearch && matchesType;
     });
-  }, [filterType, searchTerm]);
+  }, [docs, filterType, searchTerm]);
+
+  const handleDelete = async (id: string) => {
+    if (isGuest) return; // guest can't delete from server
+    try {
+      await api.documents.softDelete(id);
+      setDocs((prev) => { const updated = prev.filter((d) => d.id !== id); setStats(computeStats(updated)); return updated; });
+    } catch (e) { console.error(e); }
+  };
 
   const statsItems = [
-    {
-      title: 'Total Indexed',
-      value: stats.totalIndexed,
-      description: `${stats.links} links · ${stats.documents} documents`,
-    },
-    {
-      title: 'Open',
-      value: stats.types.open,
-      description: `${((stats.types.open / stats.totalIndexed) * 100).toFixed(0)}% of total indexed`,
-    },
-    {
-      title: 'Private',
-      value: stats.types.private,
-      description: `${((stats.types.private / stats.totalIndexed) * 100).toFixed(0)}% of total indexed`,
-    },
-    {
-      title: 'Malicious',
-      value: stats.types.malicious,
-      description: `${((stats.types.malicious / stats.totalIndexed) * 100).toFixed(0)}% flagged as threats`,
-    },
+    { title: 'Total Indexed', value: stats.total_indexed, description: `${stats.links} links · ${stats.documents} documents` },
+    { title: 'Safe', value: stats.open_count, description: `${stats.total_indexed ? ((stats.open_count / stats.total_indexed) * 100).toFixed(0) : 0}% of total` },
+    { title: 'Malicious', value: stats.malicious_count, description: `${stats.total_indexed ? ((stats.malicious_count / stats.total_indexed) * 100).toFixed(0) : 0}% flagged as threats` },
   ];
 
   return (
@@ -94,16 +94,16 @@ export function DashboardPage() {
       <div className={styles.titleRow}>
         <div className={styles.titleBlock}>
           <h1 className={styles.pageTitle}>Home</h1>
-          <p className={styles.subtitle}>Search, inspect, and triage tagged documents and links.</p>
+          <p className={styles.subtitle}>
+            Search, inspect, and triage tagged documents and links.
+            {isGuest && <span style={{ color: '#f97316', marginLeft: 8 }}>Guest session — data is temporary.</span>}
+          </p>
         </div>
       </div>
 
       <div className={styles.statsGroup}>
         {statsItems.map((item, index) => (
-          <div
-            key={item.title}
-            className={`${styles.statItem} ${index !== 0 ? styles.statItemBorder : ''}`}
-          >
+          <div key={item.title} className={`${styles.statItem} ${index !== 0 ? styles.statItemBorder : ''}`}>
             <span className={styles.statValue}>{item.value}</span>
             <span className={styles.statTitle}>{item.title}</span>
             <span className={styles.statDescription}>{item.description}</span>
@@ -121,19 +121,14 @@ export function DashboardPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-
         <ToggleGroup.Root
           className={styles.segmentedControl}
           type="single"
           value={filterType}
-          onValueChange={(value) => value && setFilterType(value as FilterType)}
+          onValueChange={(v) => v && setFilterType(v as FilterType)}
         >
           {filterOptions.map((opt) => (
-            <ToggleGroup.Item
-              key={opt.value}
-              className={styles.segmentedItem}
-              value={opt.value}
-            >
+            <ToggleGroup.Item key={opt.value} className={styles.segmentedItem} value={opt.value}>
               {opt.label}
             </ToggleGroup.Item>
           ))}
@@ -143,12 +138,7 @@ export function DashboardPage() {
       <div className={styles.activityCard}>
         <div className={styles.activityHeader}>
           <h2 className={styles.activityTitle}>Recent Activity</h2>
-          <button className={styles.viewAllBtn}>
-            View All
-            <ArrowRight size={14} />
-          </button>
         </div>
-
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
             <thead>
@@ -157,58 +147,60 @@ export function DashboardPage() {
                 <th>Tags</th>
                 <th>Status</th>
                 <th>Date</th>
+                {!isGuest && <th></th>}
               </tr>
             </thead>
             <tbody>
-              {filteredActivity.length > 0 ? (
-                filteredActivity.map((item) => {
-                  const ItemIcon = item.type === 'pdf' ? File : LinkIcon;
+              {filtered.length > 0 ? (
+                filtered.map((item) => {
+                  const Icon = item.source_type === 'pdf' ? File : LinkIcon;
                   return (
                     <tr key={item.id}>
                       <td>
                         <div className={styles.itemCell}>
-                          <div className={styles.itemIcon}>
-                            <ItemIcon size={16} />
-                          </div>
+                          <div className={styles.itemIcon}><Icon size={16} /></div>
                           <div>
-                            <span className={styles.itemTitle}>{item.title}</span>
-                            <span className={styles.itemType}>{item.type.toUpperCase()}</span>
+                            <span className={styles.itemTitle}>{item.title || item.source_url || '—'}</span>
+                            <span className={styles.itemType}>{item.source_type.toUpperCase()}</span>
                           </div>
                         </div>
                       </td>
                       <td>
                         <div className={styles.tags}>
-                          {item.tags.map((tag) => (
-                            <span key={tag} className={styles.badge}>{tag}</span>
-                          ))}
+                          {item.tags.length > 0
+                            ? item.tags.map((tag) => <span key={tag} className={styles.badge}>{tag}</span>)
+                            : <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span>}
                         </div>
                       </td>
                       <td>
-                        {item.isMalicious ? (
-                          <span className={styles.statusBadge}>
-                            <span className={styles.statusDotRed}></span>
-                            Malicious
-                          </span>
-                        ) : (
-                          <span className={styles.statusBadge}>
-                            <span className={styles.statusDotGreen}></span>
-                            Clear
-                          </span>
-                        )}
+                        {item.is_malicious
+                          ? <span className={styles.statusBadge}><span className={styles.statusDotRed} />Malicious</span>
+                          : <span className={styles.statusBadge}><span className={styles.statusDotGreen} />Clear</span>}
                       </td>
                       <td>
                         <div className={styles.dateCell}>
                           <Calendar size={14} className={styles.dateIcon} />
-                          <span className={styles.date}>{item.date}</span>
+                          <span className={styles.date}>{new Date(item.created_at).toLocaleDateString()}</span>
                         </div>
                       </td>
+                      {!isGuest && (
+                        <td>
+                          <button
+                            title="Move to trash"
+                            onClick={() => handleDelete(item.id)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={4} className={styles.emptyMessage}>
-                    No matching items found.
+                  <td colSpan={5} className={styles.emptyMessage}>
+                    {docs.length === 0 ? 'No documents yet — go to Upload to add your first one.' : 'No matching items found.'}
                   </td>
                 </tr>
               )}
