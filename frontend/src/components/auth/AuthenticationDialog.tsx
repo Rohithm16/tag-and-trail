@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import * as Dialog from '@radix-ui/react-dialog';
-import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../../context/useAuth';
 import styles from './AuthenticationDialog.module.css';
 
@@ -12,16 +11,14 @@ const content = {
     title: 'Welcome back',
     description: 'Enter your credentials to access your account.',
     submitLabel: 'Login',
-    googleLabel: 'Login with Google',
     alternateText: "Don't have an account?",
     alternateAction: 'Sign Up',
     alternateHref: '/signup',
   },
   signup: {
     title: 'Create an account',
-    description: 'Sign up to start organizing your content.',
+    description: 'Sign up to start organising your content.',
     submitLabel: 'Sign Up',
-    googleLabel: 'Sign up with Google',
     alternateText: 'Already have an account?',
     alternateAction: 'Login',
     alternateHref: '/login',
@@ -31,28 +28,37 @@ const content = {
 export function AuthenticationDialog({ mode }: { mode: AuthMode }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const { login, signup, user } = useAuth();
   const navigate = useNavigate();
   const copy = content[mode];
 
   useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
+    if (user) navigate('/dashboard');
   }, [navigate, user]);
 
   const handleClose = () => navigate('/');
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setError('');
+    setLoading(true);
 
-    if (mode === 'signin') {
-      login(email, password);
-    } else {
-      signup(email, password);
+    try {
+      if (mode === 'signin') {
+        await login(email, password);
+      } else {
+        await signup(email, password, name);
+      }
+      navigate('/dashboard');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Something went wrong');
+    } finally {
+      setLoading(false);
     }
-
-    navigate('/dashboard');
   };
 
   return (
@@ -62,7 +68,7 @@ export function AuthenticationDialog({ mode }: { mode: AuthMode }) {
         <Dialog.Content className={styles.content}>
           <div className={styles.stack}>
             <div className={styles.brandBlock}>
-              <span className={styles.brand}>Tag & Trail</span>
+              <span className={styles.brand}>Tag &amp; Trail</span>
               <Dialog.Title className={styles.title}>{copy.title}</Dialog.Title>
               <Dialog.Description className={styles.description}>
                 {copy.description}
@@ -70,6 +76,18 @@ export function AuthenticationDialog({ mode }: { mode: AuthMode }) {
             </div>
 
             <form onSubmit={handleSubmit} className={styles.form}>
+              {mode === 'signup' && (
+                <div className={styles.fieldGroup}>
+                  <label className={styles.label}>Name (optional)</label>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    placeholder="Your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+              )}
               <div className={styles.fieldGroup}>
                 <label className={styles.label}>Email</label>
                 <input
@@ -88,16 +106,16 @@ export function AuthenticationDialog({ mode }: { mode: AuthMode }) {
                   type="password"
                   placeholder="Your password"
                   required
+                  minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              <button type="submit" className={styles.submitBtn}>
-                {copy.submitLabel}
-              </button>
-              <button type="button" className={styles.googleBtn}>
-                <FcGoogle size={20} />
-                {copy.googleLabel}
+
+              {error && <p style={{ color: '#ef4444', fontSize: '0.85rem', margin: 0 }}>{error}</p>}
+
+              <button type="submit" className={styles.submitBtn} disabled={loading}>
+                {loading ? 'Please wait…' : copy.submitLabel}
               </button>
             </form>
 

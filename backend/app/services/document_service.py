@@ -32,13 +32,15 @@ def process_url(url: str, user_id: UUID, db: Session) -> dict:
     title = meta.get("title") or url
     description = meta.get("description") or ""
 
-    # 3. Tag generation (only if safe)
+    # 3. Tag generation (only if safe) — use description if available, else title
     tags: list = []
-    if not is_malicious and description:
-        try:
-            tags = generate_tags(title, description, db)
-        except Exception as e:
-            tags = []
+    if not is_malicious:
+        tag_text = description if description else title
+        if tag_text and len(tag_text.split()) >= 4:
+            try:
+                tags = generate_tags(title, tag_text, db)
+            except Exception:
+                tags = []
 
     # 4. Persist
     doc = document_repository.create(

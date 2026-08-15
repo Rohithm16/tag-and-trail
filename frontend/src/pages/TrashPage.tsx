@@ -1,36 +1,47 @@
-import { useState } from 'react';
-import { Trash2, File, Link as LinkIcon, Calendar, RotateCcw, XCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { File, Link as LinkIcon, Calendar, RotateCcw, XCircle, Trash2, Loader } from 'lucide-react';
 import styles from '../App.module.css';
-
-type TrashItem = {
-  id: number;
-  title: string;
-  type: 'pdf' | 'link';
-  tags: string[];
-  date: string;
-  isMalicious: boolean;
-};
-
-const initialTrash: TrashItem[] = [
-  { id: 1, title: 'Old Draft', type: 'pdf', tags: ['draft', 'archived'], date: '2025-03-15', isMalicious: false },
-  { id: 2, title: 'Spam Link', type: 'link', tags: ['spam'], date: '2025-03-14', isMalicious: true },
-  { id: 3, title: 'Meeting Notes (v1)', type: 'pdf', tags: ['meeting', 'old'], date: '2025-03-10', isMalicious: false },
-];
+import { api, type Document } from '../api/client';
+import { useAuth } from '../context/useAuth';
 
 export function TrashPage() {
-  const [trashItems, setTrashItems] = useState<TrashItem[]>(initialTrash);
+  const { isGuest } = useAuth();
+  const [items, setItems] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(!isGuest);
 
-  const handleRecover = (id: number) => {
-    setTrashItems((prev) => prev.filter((item) => item.id !== id));
-    // TODO: API call to recover
-    console.log('Recovered item', id);
+  useEffect(() => {
+    if (isGuest) return; // guests have no server-side trash
+    api.documents.trash()
+      .then(setItems)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [isGuest]);
+
+  const handleRecover = async (id: string) => {
+    try {
+      await api.documents.restore(id);
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleDeletePermanent = (id: number) => {
-    setTrashItems((prev) => prev.filter((item) => item.id !== id));
-    // TODO: API call to permanently delete
-    console.log('Permanently deleted', id);
+  const handleDeletePermanent = async (id: string) => {
+    try {
+      await api.documents.hardDelete(id);
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className={styles.stack} style={{ alignItems: 'center', paddingTop: 60 }}>
+        <Loader size={32} style={{ animation: 'spin 1s linear infinite', color: '#6366f1' }} />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.stack}>
@@ -41,7 +52,7 @@ export function TrashPage() {
         </div>
       </div>
 
-      {trashItems.length === 0 ? (
+      {items.length === 0 ? (
         <div className={styles.emptyState}>
           <Trash2 size={40} className={styles.emptyStateIcon} />
           <p className={styles.emptyStateText}>Your trash is empty.</p>
@@ -60,42 +71,34 @@ export function TrashPage() {
                 </tr>
               </thead>
               <tbody>
-                {trashItems.map((item) => {
-                  const ItemIcon = item.type === 'pdf' ? File : LinkIcon;
+                {items.map((item) => {
+                  const Icon = item.source_type === 'pdf' ? File : LinkIcon;
                   return (
                     <tr key={item.id}>
                       <td>
                         <div className={styles.itemCell}>
-                          <div className={styles.itemIcon}>
-                            <ItemIcon size={16} />
-                          </div>
-                          <span className={styles.itemTitle}>{item.title}</span>
+                          <div className={styles.itemIcon}><Icon size={16} /></div>
+                          <span className={styles.itemTitle}>{item.title || item.source_url || '—'}</span>
                         </div>
                       </td>
                       <td>
                         <div className={styles.tags}>
-                          {item.tags.map((tag) => (
-                            <span key={tag} className={styles.badge}>{tag}</span>
-                          ))}
+                          {item.tags.length > 0
+                            ? item.tags.map((tag) => <span key={tag} className={styles.badge}>{tag}</span>)
+                            : <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span>}
                         </div>
                       </td>
                       <td>
-                        {item.isMalicious ? (
-                          <span className={styles.statusBadge}>
-                            <span className={styles.statusDotRed}></span>
-                            Malicious
-                          </span>
+                        {item.is_malicious ? (
+                          <span className={styles.statusBadge}><span className={styles.statusDotRed} />Malicious</span>
                         ) : (
-                          <span className={styles.statusBadge}>
-                            <span className={styles.statusDotGreen}></span>
-                            Clear
-                          </span>
+                          <span className={styles.statusBadge}><span className={styles.statusDotGreen} />Clear</span>
                         )}
                       </td>
                       <td>
                         <div className={styles.dateCell}>
                           <Calendar size={14} className={styles.dateIcon} />
-                          <span className={styles.date}>{item.date}</span>
+                          <span className={styles.date}>{new Date(item.created_at).toLocaleDateString()}</span>
                         </div>
                       </td>
                       <td>

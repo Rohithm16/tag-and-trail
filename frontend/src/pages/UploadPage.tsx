@@ -1,23 +1,78 @@
-import { useState } from 'react';
-import { UploadCloud, Link as LinkIcon, File, X } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import {
+  UploadCloud, Link as LinkIcon, File, X,
+  CheckCircle, AlertTriangle, Loader, Clock,
+} from 'lucide-react';
 import styles from '../App.module.css';
+import { api, type Document } from '../api/client';
+import { useAuth } from '../context/useAuth';
+
+type UploadMode = 'link' | 'pdf';
+
+// Global event so Dashboard can listen for new docs without blocking
+export const uploadEventBus = {
+  listeners: new Set<(doc: Document) => void>(),
+  emit(doc: Document) { this.listeners.forEach((fn) => fn(doc)); },
+  on(fn: (doc: Document) => void) { this.listeners.add(fn); return () => this.listeners.delete(fn); },
+};
 
 export function UploadPage() {
+  const { isGuest, addGuestDoc } = useAuth();
+  const [mode, setMode] = useState<UploadMode>('link');
   const [link, setLink] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [result, setResult] = useState<Document | null>(null);
+  const [error, setError] = useState('');
+  const [dragging, setDragging] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(false);
+    const dropped = e.dataTransfer.files[0];
+    if (dropped?.name.toLowerCase().endsWith('.pdf')) setFile(dropped);
+    else setError('Only PDF files are supported');
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setResult(null);
+
+    if (mode === 'link' && !link.trim()) { setError('Please enter a URL'); return; }
+    if (mode === 'pdf' && !file) { setError('Please select a PDF file'); return; }
+    if (isGuest && mode === 'pdf') { setError('Guest mode only supports URL links for scanning.'); return; }
+
+    setSubmitting(false);
+    setProcessing(true);
+
+    // Fire-and-forget: user can navigate away while this runs
+    const doUpload = async () => {
+      try {
+        const doc = mode === 'link'
+          ? await api.documents.uploadUrl(link.trim())
+          : await api.documents.uploadPdf(file!);
+
+        if (isGuest) addGuestDoc(doc);
+        uploadEventBus.emit(doc); // notify Dashboard
+        setResult(doc);
+        setLink('');
+        setFile(null);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Upload failed');
+      } finally {
+        setProcessing(false);
+      }
+    };
+
+    doUpload();
   };
 
-  const removeFile = () => setFile(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Uploading:', { link, file });
-    // TODO: API call
+  const riskColor = (level: string | null) => {
+    if (level === 'HIGH') return '#ef4444';
+    if (level === 'MEDIUM') return '#f97316';
+    return '#22c55e';
   };
 
   return (
@@ -26,62 +81,140 @@ export function UploadPage() {
         <div className={styles.titleBlock}>
           <h1 className={styles.pageTitle}>Upload</h1>
           <p className={styles.subtitle}>
-            Upload a link or a PDF document to index and tag.
+            Submit a link or PDF to scan, index, and tag.
+            {isGuest && <span style={{ color: '#f97316', marginLeft: 8 }}>Guest mode — URLs only, results are temporary.</span>}
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className={styles.uploadForm}>
-        {/* Link Input */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label} htmlFor="linkInput">
-            <LinkIcon size={16} /> Link URL
-          </label>
-          <input
-            id="linkInput"
-            type="url"
-            className={styles.input}
-            placeholder="https://example.com/document"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-          />
-        </div>
+      {/* Mode toggle */}
+      <div style={{ display: 'flex', gap: 0, background: '#f1f5f9', borderRadius: 8, padding: 3, width: 'fit-content' }}>
+        {(['link', 'pdf'] as UploadMode[]).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => { setMode(m); setResult(null); setError(''); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              fontWeight: 500, fontSize: '0.875rem',
+              background: mode === m ? 'white' : 'transparent',
+              boxShadow: mode === m ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              color: '#334155',
+            }}
+          >
+            {m === 'link' ? <LinkIcon size={14} /> : <File size={14} />}
+            {m === 'link' ? 'Link / URL' : 'PDF File'}
+          </button>
+        ))}
+      </div>
 
-        {/* PDF Dropzone / File Input */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>
-            <File size={16} /> PDF Document
-          </label>
-          <div className={styles.dropzone}>
-            {!file ? (
-              <>
-                <UploadCloud size={40} className={styles.dropzoneIcon} />
-                <p className={styles.dropzoneText}>
-                  Drag & drop a PDF here, or <span className={styles.browseLink}>browse</span>
-                </p>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className={styles.fileInput}
-                />
-              </>
-            ) : (
-              <div className={styles.filePreview}>
-                <File size={20} />
-                <span>{file.name}</span>
-                <button type="button" onClick={removeFile} className={styles.removeFileBtn}>
-                  <X size={16} />
-                </button>
+      <form onSubmit={handleSubmit} className={styles.uploadForm}>
+        {mode === 'link' ? (
+          <div className={styles.inputGroup}>
+            <label className={styles.label} htmlFor="linkInput">
+              <LinkIcon size={16} /> URL
+            </label>
+            <input
+              id="linkInput"
+              type="url"
+              className={styles.input}
+              placeholder="https://example.com/article"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div className={styles.inputGroup}>
+            <label className={styles.label}><File size={16} /> PDF Document</label>
+            <div
+              className={styles.dropzone}
+              style={{ borderColor: dragging ? '#6366f1' : undefined }}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+            >
+              {!file ? (
+                <>
+                  <UploadCloud size={40} className={styles.dropzoneIcon} />
+                  <p className={styles.dropzoneText}>
+                    Drag &amp; drop a PDF here, or <span className={styles.browseLink}>browse</span>
+                  </p>
+                  <input
+                    type="file" accept=".pdf"
+                    onChange={(e) => { if (e.target.files?.[0]) setFile(e.target.files[0]); }}
+                    className={styles.fileInput}
+                  />
+                </>
+              ) : (
+                <div className={styles.filePreview}>
+                  <File size={20} />
+                  <span>{file.name}</span>
+                  <button type="button" onClick={() => setFile(null)} className={styles.removeFileBtn}>
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontSize: '0.875rem' }}>
+            <AlertTriangle size={16} /> {error}
+          </div>
+        )}
+
+        <button type="submit" className={styles.submitBtn} disabled={processing}>
+          {processing
+            ? <><Loader size={18} style={{ animation: 'spin 1s linear infinite' }} /> Analysing…</>
+            : 'Upload & Index'}
+        </button>
+      </form>
+
+      {processing && !result && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748b', fontSize: '0.875rem' }}>
+          <Clock size={16} />
+          Analysis running in background — you can navigate away and come back.
+        </div>
+      )}
+
+      {/* Result card */}
+      {result && (
+        <div className={styles.activityCard}>
+          <div className={styles.activityHeader}>
+            <h2 className={styles.activityTitle}>
+              {result.is_malicious
+                ? <><AlertTriangle size={18} style={{ color: '#ef4444', marginRight: 6 }} />Malicious Content Detected</>
+                : <><CheckCircle size={18} style={{ color: '#22c55e', marginRight: 6 }} />Indexed Successfully</>}
+            </h2>
+          </div>
+          <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {result.title && <p style={{ margin: 0, fontWeight: 600 }}>{result.title}</p>}
+
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
+              <span>Type: <strong>{result.source_type.toUpperCase()}</strong></span>
+              <span>Prediction: <strong>{result.prediction}</strong></span>
+              <span>Risk: <strong style={{ color: riskColor(result.risk_level) }}>{result.risk_level}</strong></span>
+            </div>
+
+            {!result.is_malicious && result.tags.length > 0 && (
+              <div>
+                <p style={{ margin: '0 0 6px', fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>Generated Tags</p>
+                <div className={styles.tags}>
+                  {result.tags.map((tag) => <span key={tag} className={styles.badge}>{tag}</span>)}
+                </div>
+              </div>
+            )}
+
+            {result.flags.length > 0 && (
+              <div style={{ fontSize: '0.8rem', color: '#f97316' }}>
+                Flags: {result.flags.join(', ')}
               </div>
             )}
           </div>
         </div>
-
-        <button type="submit" className={styles.submitBtn}>
-          Upload & Index
-        </button>
-      </form>
+      )}
     </div>
   );
 }

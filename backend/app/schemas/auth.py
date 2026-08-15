@@ -25,3 +25,8 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UpdateProfileRequest(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
