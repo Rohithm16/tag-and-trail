@@ -1,11 +1,12 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   UploadCloud, Link as LinkIcon, File, X,
   CheckCircle, AlertTriangle, Loader, Clock,
 } from 'lucide-react';
 import styles from '../App.module.css';
-import { api, type Document } from '../api/client';
+import { type Document } from '../api/client';
 import { useAuth } from '../context/useAuth';
+import { startUpload, resetUpload, useUploadState } from '../state/uploadStore';
 
 type UploadMode = 'link' | 'pdf';
 
@@ -18,13 +19,13 @@ export const uploadEventBus = {
 
 export function UploadPage() {
   const { isGuest, addGuestDoc } = useAuth();
+  const { status, result, error: uploadError } = useUploadState();
+  const processing = status === 'processing';
+
   const [mode, setMode] = useState<UploadMode>('link');
   const [link, setLink] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<Document | null>(null);
-  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
   const [dragging, setDragging] = useState(false);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -32,41 +33,38 @@ export function UploadPage() {
     setDragging(false);
     const dropped = e.dataTransfer.files[0];
     if (dropped?.name.toLowerCase().endsWith('.pdf')) setFile(dropped);
-    else setError('Only PDF files are supported');
+    else setFormError('Only PDF files are supported');
   }, []);
+
+  const handleModeChange = (m: UploadMode) => {
+    setMode(m);
+    setFormError('');
+    // Don't clear a result/error that belongs to an upload still in
+    // flight or just finished — only clear stale display state.
+    if (status !== 'processing') resetUpload();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setResult(null);
+    setFormError('');
 
-    if (mode === 'link' && !link.trim()) { setError('Please enter a URL'); return; }
-    if (mode === 'pdf' && !file) { setError('Please select a PDF file'); return; }
-    if (isGuest && mode === 'pdf') { setError('Guest mode only supports URL links for scanning.'); return; }
+    if (mode === 'link' && !link.trim()) { setFormError('Please enter a URL'); return; }
+    if (mode === 'pdf' && !file) { setFormError('Please select a PDF file'); return; }
+    if (isGuest && mode === 'pdf') { setFormError('Guest mode only supports URL links for scanning.'); return; }
 
-    setSubmitting(false);
-    setProcessing(true);
+    const payload = mode === 'link' ? link.trim() : file!;
 
-    // Fire-and-forget: user can navigate away while this runs
-    const doUpload = async () => {
-      try {
-        const doc = mode === 'link'
-          ? await api.documents.uploadUrl(link.trim())
-          : await api.documents.uploadPdf(file!);
+    // Fire-and-forget from the component's perspective: the store keeps
+    // running this even if the user navigates away, so status is never
+    // lost — startUpload updates the shared store, which any mounted
+    // page (including this one, if you come back) reads from.
+    startUpload(mode, payload, (doc) => {
+      if (isGuest) addGuestDoc(doc);
+      uploadEventBus.emit(doc); // notify Dashboard
+    }, isGuest);
 
-        if (isGuest) addGuestDoc(doc);
-        uploadEventBus.emit(doc); // notify Dashboard
-        setResult(doc);
-        setLink('');
-        setFile(null);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Upload failed');
-      } finally {
-        setProcessing(false);
-      }
-    };
-
-    doUpload();
+    setLink('');
+    setFile(null);
   };
 
   const riskColor = (level: string | null) => {
@@ -93,7 +91,7 @@ export function UploadPage() {
           <button
             key={m}
             type="button"
-            onClick={() => { setMode(m); setResult(null); setError(''); }}
+            onClick={() => handleModeChange(m)}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer',
@@ -159,9 +157,15 @@ export function UploadPage() {
           </div>
         )}
 
-        {error && (
+        {formError && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontSize: '0.875rem' }}>
-            <AlertTriangle size={16} /> {error}
+            <AlertTriangle size={16} /> {formError}
+          </div>
+        )}
+
+        {status === 'error' && uploadError && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontSize: '0.875rem' }}>
+            <AlertTriangle size={16} /> {uploadError}
           </div>
         )}
 
@@ -172,15 +176,15 @@ export function UploadPage() {
         </button>
       </form>
 
-      {processing && !result && (
+      {processing && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748b', fontSize: '0.875rem' }}>
           <Clock size={16} />
-          Analysis running in background — you can navigate away and come back.
+          Analysis running in background — you can navigate away and come back, this will still be here.
         </div>
       )}
 
       {/* Result card */}
-      {result && (
+      {status === 'done' && result && (
         <div className={styles.activityCard}>
           <div className={styles.activityHeader}>
             <h2 className={styles.activityTitle}>

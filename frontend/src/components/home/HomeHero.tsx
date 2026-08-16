@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type CSSProperties } from 'react';
+import { Component, lazy, Suspense, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import type { IconType } from 'react-icons';
@@ -12,6 +12,23 @@ const Dithering = lazy(() =>
     default: module.Dithering,
   }))
 );
+
+// The shader needs WebGL. Its init throws asynchronously inside its own
+// promise chain (not during React's render phase), so a React error
+// boundary can never catch it — by the time it throws, render has already
+// finished. The only reliable fix is to check support up front and skip
+// loading the shader entirely when it's unavailable.
+function supportsWebGL(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch {
+    return false;
+  }
+}
 
 type FloatingIcon = {
   Icon: IconType;
@@ -38,8 +55,34 @@ const floatingIcons: FloatingIcon[] = [
   { Icon: SiImessage, color: '#34c759', className: styles.imessage, delay: '0.3s', duration: '3.1s', label: 'iMessage' },
 ];
 
+// The shader is a third-party WebGL component. If it throws at render time
+// (no WebGL support, a driver/GPU quirk, a bad context) Suspense alone won't
+// catch it — Suspense only handles the loading state, not render errors —
+// so the failure would propagate up and could unmount the whole page above
+// it. This boundary contains that failure to just the decorative background,
+// falling back to the plain dotted pattern instead.
+class ShaderErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error('Hero shader failed to render, falling back:', error);
+  }
+
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
+
 export function HomeHero() {
   const [isHovered, setIsHovered] = useState(false);
+  // Computed once on mount, not on every render — WebGL support doesn't
+  // change mid-session.
+  const [webglSupported] = useState(supportsWebGL);
   const { loginAsGuest } = useAuth();
   const navigate = useNavigate();
 
@@ -56,19 +99,27 @@ export function HomeHero() {
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          <Suspense fallback={<div className={styles.shaderFallback} />}>
-            <div className={styles.shaderLayer}>
-              <Dithering
-                className={styles.shaderCanvas}
-                colorBack="#00000000"
-                colorFront="#63a6ff"
-                minPixelRatio={1}
-                shape="warp"
-                speed={isHovered ? 0.52 : 0.16}
-                type="4x4"
-              />
-            </div>
-          </Suspense>
+          {webglSupported ? (
+            <ShaderErrorBoundary fallback={<div className={styles.shaderFallback} />}>
+              <Suspense fallback={<div className={styles.shaderFallback} />}>
+                <div className={styles.shaderLayer}>
+                  <Dithering
+                    className={styles.shaderCanvas}
+                    colorBack="#00000000"
+                    colorFront="#63a6ff"
+                    minPixelRatio={1}
+                    shape="warp"
+                    speed={isHovered ? 0.52 : 0.16}
+                    type="4x4"
+                  />
+                </div>
+              </Suspense>
+            </ShaderErrorBoundary>
+          ) : (
+            // No WebGL available — never attempt to load the shader lib at
+            // all, so its async init can't throw the unhandled rejection.
+            <div className={styles.shaderFallback} />
+          )}
 
           <div className={styles.content}>
             <h1 className={styles.title}>

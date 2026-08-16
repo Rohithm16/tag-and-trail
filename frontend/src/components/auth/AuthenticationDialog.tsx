@@ -32,7 +32,7 @@ export function AuthenticationDialog({ mode }: { mode: AuthMode }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, signup, user } = useAuth();
+  const { login, signup, user, loginAsGuest } = useAuth();
   const navigate = useNavigate();
   const copy = content[mode];
 
@@ -59,6 +59,11 @@ export function AuthenticationDialog({ mode }: { mode: AuthMode }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGuest = () => {
+    loginAsGuest();
+    navigate('/dashboard');
   };
 
   return (
@@ -112,19 +117,43 @@ export function AuthenticationDialog({ mode }: { mode: AuthMode }) {
                 />
               </div>
 
-              {error && <p style={{ color: '#ef4444', fontSize: '0.85rem', margin: 0 }}>{error}</p>}
+              {error && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: 0 }}>{error}</p>}
 
               <button type="submit" className={styles.submitBtn} disabled={loading}>
                 {loading ? 'Please wait…' : copy.submitLabel}
               </button>
             </form>
 
-            <p className={styles.alternate}>
-              {copy.alternateText}{' '}
-              <Link to={copy.alternateHref} className={styles.link}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-0.3rem 0' }}>
+              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+              <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>or</span>
+              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGuest}
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                borderRadius: '0.45rem',
+                border: '1px solid #e2e8f0',
+                background: 'transparent',
+                color: '#334155',
+                fontWeight: 500,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+              }}
+            >
+              Try as Guest
+            </button>
+
+            <div>
+              <p className={styles.alternateLabel}>{copy.alternateText}</p>
+              <Link to={copy.alternateHref} className={styles.alternateBtn}>
                 {copy.alternateAction}
               </Link>
-            </p>
+            </div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
