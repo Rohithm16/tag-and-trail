@@ -9,18 +9,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [isGuest, setIsGuest] = useState(false);
   const [guestDocs, setGuestDocs] = useState<Document[]>([]);
+  // True until we've finished checking whether a stored token is still valid.
+  // Keeps AuthenticatedRoute from bouncing a logged-in user to /login on reload.
+  const [initializing, setInitializing] = useState(true);
 
   // Restore session from stored token on mount
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY);
-    if (stored && !user) {
-      api.auth.me()
-        .then((u) => setUser({ email: u.email, name: u.name }))
-        .catch(() => {
-          localStorage.removeItem(TOKEN_KEY);
-          setToken(null);
-        });
+    if (!stored) {
+      setInitializing(false);
+      return;
     }
+    api.auth.me()
+      .then((u) => setUser({ email: u.email, name: u.name }))
+      .catch(() => {
+        localStorage.removeItem(TOKEN_KEY);
+        setToken(null);
+      })
+      .finally(() => setInitializing(false));
   }, []);
 
   const _persist = (access_token: string, email: string, name: string | null) => {
@@ -73,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, isGuest, guestDocs, addGuestDoc, login, signup, loginAsGuest, logout, updateProfile }}
+      value={{ user, token, isGuest, guestDocs, initializing, addGuestDoc, login, signup, loginAsGuest, logout, updateProfile }}
     >
       {children}
     </AuthContext.Provider>

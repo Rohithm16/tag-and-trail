@@ -10,6 +10,8 @@ export interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   isGuest: boolean;
+  /** True until the stored-token check on mount has resolved. */
+  initializing: boolean;
   /** In-memory docs for guest session */
   guestDocs: Document[];
   addGuestDoc: (doc: Document) => void;

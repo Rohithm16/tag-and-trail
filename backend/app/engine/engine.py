@@ -132,6 +132,23 @@ def get_candidate_pool(raw_text: str) -> Counter:
     candidate_counter: Counter = Counter()
     chunks_found = False
 
+    # Word -> POS lookup built from the single full-document parse above.
+    # Previously, every unigram candidate re-ran the whole spaCy pipeline
+    # via `nlp(ngram)` just to read its POS tag — one extra full parse per
+    # candidate word, on top of the document parse already done. That's
+    # wasted work (and slows down every upload), so we reuse the tags
+    # spaCy already assigned in the original document parse instead.
+    # Note: this uses the word's in-context POS tag rather than an
+    # isolated-word re-parse, which is generally the more reliable signal
+    # anyway (spaCy's tagger depends on surrounding context), but it can
+    # shift a small number of borderline tags versus the old behavior —
+    # worth spot-checking against a few of your existing documents.
+    word_pos: dict = {}
+    for token in doc:
+        key = re.sub(r"[^a-z0-9]", "", token.text.lower())
+        if key and key not in word_pos:
+            word_pos[key] = token.pos_
+
     for chunk in doc.noun_chunks:
         cleaned = clean_and_truncate_chunk(chunk)
         if not cleaned:
@@ -141,7 +158,7 @@ def get_candidate_pool(raw_text: str) -> Counter:
         for n in range(1, min(5, len(words) + 1)):
             for i in range(len(words) - n + 1):
                 ngram = " ".join(words[i : i + n])
-                if n == 1 and (len(ngram) < 3 or nlp(ngram)[0].pos_ in {"ADJ", "VERB"}):
+                if n == 1 and (len(ngram) < 3 or word_pos.get(ngram) in {"ADJ", "VERB"}):
                     continue
                 if ngram not in MIN_BLOCKLIST:
                     candidate_counter[ngram] += 1

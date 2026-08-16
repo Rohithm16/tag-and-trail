@@ -21,7 +21,10 @@
 .panel {
   position: relative;
   width: 100%;
-  height: calc(100vh - 50px);
+  /* Matches .page's own budget (margin-top: 80px + min-height: calc(100vh - 80px))
+     instead of the old 50px offset, which made the panel ~30px taller than
+     the space .page actually accounts for and pushed content past the fold. */
+  height: calc(100vh - 80px);
   overflow: hidden;               /* critical for shader clipping */
   display: flex;
   flex-direction: column;
@@ -62,6 +65,15 @@
   background-size: 10px 10px;
   opacity: 0.42;
   border-radius: inherit;
+  /* No WebGL available, so this can't reproduce the real shader — but a
+     slow drifting background-position at least gives it motion instead of
+     sitting completely static. Pure CSS, no GPU context required. */
+  animation: fallbackDrift 9s ease-in-out infinite;
+}
+
+@keyframes fallbackDrift {
+  0%, 100% { background-position: 0 0; }
+  50% { background-position: 14px 11px; }
 }
 
 /* Content with extra padding so descenders like 'g' stay visible inside the panel */

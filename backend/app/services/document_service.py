@@ -5,6 +5,10 @@ Document service — orchestrates the full pipeline:
 import os
 import shutil
 import tempfile
+import uuid
+from datetime import datetime, timezone
+from types import SimpleNamespace
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -20,8 +24,14 @@ from app.core.url_safety import is_public_resource
 MAX_FILE_BYTES = settings.MAX_FILE_SIZE_MB * 1024 * 1024
 
 
-def process_url(url: str, user_id: UUID, db: Session) -> dict:
-    """Run the full pipeline for a submitted URL."""
+def process_url(url: str, user_id: Optional[UUID], db: Session, persist: bool = True) -> dict:
+    """Run the full pipeline for a submitted URL.
+
+    When persist=False (guest / ephemeral scans), the URL is still fully
+    analysed — security scan, metadata, tags — but nothing is written to
+    the database, and no user_id is required. Used for guest mode, which
+    has no account to attach a row to.
+    """
 
     # 1. Security scan
     ml_result = run_url_model(url)
@@ -42,10 +52,7 @@ def process_url(url: str, user_id: UUID, db: Session) -> dict:
             except Exception:
                 tags = []
 
-    # 4. Persist
-    doc = document_repository.create(
-        db,
-        user_id=user_id,
+    common_fields = dict(
         source_type="link",
         source_url=url,
         title=title,
@@ -59,7 +66,21 @@ def process_url(url: str, user_id: UUID, db: Session) -> dict:
         flags=[],
     )
 
-    return _doc_to_dict(doc)
+    if persist:
+        if user_id is None:
+            raise ValueError("user_id is required to persist a document")
+        doc = document_repository.create(db, user_id=user_id, **common_fields)
+        return _doc_to_dict(doc)
+
+    # Ephemeral (guest) result — same shape as a persisted document, but
+    # never written to the database.
+    ephemeral = SimpleNamespace(
+        id=uuid.uuid4(),
+        is_deleted=False,
+        created_at=datetime.now(timezone.utc),
+        **common_fields,
+    )
+    return _doc_to_dict(ephemeral)
 
 
 def process_pdf(file_bytes: bytes, filename: str, user_id: UUID, db: Session) -> dict:

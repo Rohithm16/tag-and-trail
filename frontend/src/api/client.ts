@@ -70,6 +70,16 @@ export const api = {
       return request<Document>("/api/documents/upload", { method: "POST", body: form });
     },
 
+    // Unauthenticated, ephemeral scan for guest mode — runs the same
+    // pipeline as uploadUrl but hits a route with no auth requirement and
+    // nothing gets persisted server-side. Guest results only ever live in
+    // the frontend's in-memory guestDocs.
+    guestScanUrl: (url: string) => {
+      const form = new FormData();
+      form.append("url", url);
+      return request<Document>("/api/documents/guest-scan", { method: "POST", body: form });
+    },
+
     list: () => request<Document[]>("/api/documents/"),
     stats: () => request<Stats>("/api/documents/stats"),
     trash: () => request<Document[]>("/api/documents/trash"),
