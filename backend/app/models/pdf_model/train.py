@@ -20,8 +20,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Possible locations for the dataset
 CANDIDATE_PATHS = [
-    os.path.join(SCRIPT_DIR, "data", "PDFMalware2022.csv"),       # next to script in a 'data' folder
-    os.path.join(SCRIPT_DIR, "..", "data", "PDFMalware2022.csv") # in a 'data' folder one level up (backend/data)
+    os.path.join(SCRIPT_DIR, "data", "PDFMalware2022.parquet"),       # next to script in a 'data' folder
+    os.path.join(SCRIPT_DIR, "..", "data", "PDFMalware2022.parquet") # in a 'data' folder one level up (backend/data)
 ]
 
 DATA_PATH = None
@@ -31,7 +31,7 @@ for p in CANDIDATE_PATHS:
         break
 
 if DATA_PATH is None:
-    print("❌ Could not find PDFMalware2022.csv in any expected location:")
+    print("❌ Could not find PDFMalware2022.parquet in any expected location:")
     for p in CANDIDATE_PATHS:
         print(f"   {p}")
     print("\nPlease place the dataset in one of those folders or adjust CANDIDATE_PATHS in the script.")
@@ -110,7 +110,7 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, model_name, cv_score
 
 def main():
     print("Loading data...")
-    df = pd.read_csv(DATA_PATH)
+    df = pd.read_parquet(DATA_PATH)
     
     # Preprocess labels
     df["Class"] = df["Class"].astype(str).str.strip().str.capitalize()
