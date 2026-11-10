@@ -86,6 +86,3 @@ tag-and-trail/
         └── routes/         # route guards
 ```
 
-## License
-
-Add your license of choice here.
