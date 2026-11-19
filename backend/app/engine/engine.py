@@ -1,4 +1,4 @@
-﻿"""Tag & Trail Categorisation Engine
+"""Tag & Trail Categorisation Engine
 NLP pipeline: POS tagging â†’ SBERT scoring â†’ MMR diversification.
 Uses PostgreSQL (TagMemory table) instead of MongoDB for IDF memory.
 """
@@ -9,16 +9,28 @@ from datetime import datetime, timedelta
 from typing import List
 
 import numpy as np
-import spacy
-from sentence_transformers import SentenceTransformer, util
 from sklearn.metrics.pairwise import cosine_similarity
 from spellchecker import SpellChecker
 
 spell = SpellChecker()
 
 # â”€â”€ NLP models (loaded once at import time) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-nlp = spacy.load("en_core_web_sm", disable=["ner"])
-embedder = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+_nlp = None
+_embedder = None
+
+def get_nlp():
+    global _nlp
+    if _nlp is None:
+        import spacy
+        _nlp = spacy.load("en_core_web_sm", disable=["ner"])
+    return _nlp
+
+def get_embedder():
+    global _embedder
+    if _embedder is None:
+        from sentence_transformers import SentenceTransformer
+        _embedder = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+    return _embedder
 
 # â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 MIN_BLOCKLIST = {
@@ -128,7 +140,7 @@ def clean_and_truncate_chunk(chunk) -> str | None:
 def get_candidate_pool(raw_text: str) -> Counter:
     """Extract all valid noun-chunk n-grams from text."""
     text, tech_map = dynamic_tech_shield(raw_text)
-    doc = nlp(text)
+    doc = get_nlp()(text)
     candidate_counter: Counter = Counter()
     chunks_found = False
 
@@ -196,6 +208,8 @@ def score_candidates(candidate_pool: Counter, doc_text: str, title_text: str, df
     if not candidates:
         return []
 
+    from sentence_transformers import util
+    embedder = get_embedder()
     doc_emb = embedder.encode(doc_text, convert_to_tensor=True)
     cand_embs = embedder.encode(candidates, convert_to_tensor=True)
     sim_scores = util.cos_sim(doc_emb, cand_embs)[0].cpu().numpy()
