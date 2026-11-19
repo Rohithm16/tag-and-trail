@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&display=swap');
-
+/* Font loaded globally in styles/global.css — no @import needed here */
 .overlay {
   position: fixed;
   inset: 0;
@@ -29,7 +28,7 @@
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 0.6rem;
 }
 
 .brandBlock {
@@ -37,13 +36,13 @@
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
+  margin-bottom: 0.5rem;
 }
-
 
 .brand {
   font-family: 'Source Serif 4', serif;
   font-size: 1.3rem;
-  font-weight: 500;             
+  font-weight: 500;
   text-decoration: none;
   background: linear-gradient(135deg, #60a5fa, #67e8f9, #93c5fd);
   -webkit-background-clip: text;
@@ -94,66 +93,83 @@
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
-
 .submitBtn {
   padding: 0.5rem;
-  background: #0f172a;
-  color: white;
+  background: #000000;
+  color: #ffffff;
   border: none;
   border-radius: 0.45rem;
-  font-weight: 600;
+  font-weight: 400;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
-.submitBtn:hover {
-  background: #1e293b;
-}
-
-.googleBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: white;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.45rem;
-  font-weight: 500;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.googleBtn:hover {
-  background: #f8fafc;
+.submitBtn:disabled {
+  background: #52525b;
+  cursor: default;
 }
 
 .alternateLabel {
   font-size: 0.75rem;
   color: #64748b;
   text-align: center;
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.3rem;
 }
 
-/* Alternate action (Sign Up / Login) rendered as a real button instead of
-   an inline text link. */
 .alternateBtn {
   display: block;
   width: 100%;
   text-align: center;
   box-sizing: border-box;
   padding: 0.5rem;
-  border: 1px solid #cbd5e1;
+  border: none;
   border-radius: 0.45rem;
-  color: #0f172a;
-  background: white;
-  font-weight: 600;
+  color: #ffffff;
+  background: #27272a;
+  font-weight: 400;
   font-size: 0.8rem;
   text-decoration: none;
   cursor: pointer;
   transition: background 0.2s;
 }
 
-.alternateBtn:hover {
-  background: #f8fafc;
+.guestBtn {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 0.45rem;
+  border: none;
+  background: #3f3f46;
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.alternateShadeBtn {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 0.45rem;
+  border: none;
+  background: #27272a;
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.guestShadeBtn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 0.45rem;
+  color: #ffffff;
+  background: #3f3f46;
+  font-weight: 400;
+  font-size: 0.8rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s;
 }

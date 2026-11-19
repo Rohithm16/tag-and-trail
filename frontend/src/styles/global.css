@@ -1,29 +1,63 @@
+/* ─── Global Styles ────────────────────────────────────────────────────────
+   Loaded once in main.tsx. Provides:
+     • Font imports (single source — never duplicate in component CSS)
+     • Design tokens
+     • Box-sizing reset
+     • Base element resets
+     • Body background
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* Fonts — one load for the whole app */
 @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-:root {
-  color-scheme: light;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  background: #f8fafc;
-}
+/* Design tokens */
+@import './tokens.css';
 
-* {
+/* ─── Box-sizing reset ─── */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
+/* ─── Root ─── */
+:root {
+  color-scheme: light;
+  font-family: 'Source Serif 4', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ─── Document ─── */
 html {
   scroll-behavior: smooth;
+  min-height: 100%;
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
-  overflow-x: hidden;
   margin: 0;
-  background: #f8fafc;
-  color: #0f172a;
+  overflow-x: hidden;
+
+  /* Default body font — components may override via their module CSS */
+  font-family: 'Source Serif 4', ui-sans-serif, system-ui, sans-serif;
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: transparent;   /* or remove background altogether */
+}
+
+/* Keep root transparent so body background shows through */
+#root {
+  min-height: 100vh;
+  background: transparent;
+}
+
+/* ─── Base element resets ─── */
+
+
+#root > * {
+  background: transparent !important;
 }
 
 a {
@@ -40,8 +74,4 @@ ul {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-#root {
-  min-height: 100vh;
 }

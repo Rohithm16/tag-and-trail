@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { User, AtSign, Save, Check } from 'lucide-react';
-import styles from '../App.module.css';
+import { User, AtSign, Check } from 'lucide-react';
+import layoutStyles from '../styles/components/layout.module.css';
+import cardStyles from '../styles/components/cards.module.css';
+import formStyles from '../styles/components/forms.module.css';
+const styles = { ...layoutStyles, ...cardStyles, ...formStyles };
 import { useAuth } from '../context/useAuth';
 
 export function SettingsPage() {
@@ -41,7 +44,7 @@ export function SettingsPage() {
 
       <div className={styles.settingsCard}>
         <div className={styles.userInfoRow}>
-          <div className={styles.userAvatarLarge}><User size={40} /></div>
+          <div className={styles.userAvatarLarge}><User size={32} /></div>
           <div className={styles.userDetails}>
             {user?.name && <div className={styles.userName}>{user.name}</div>}
             <div className={styles.userContact}>
@@ -55,7 +58,7 @@ export function SettingsPage() {
       <form onSubmit={handleSave} className={styles.uploadForm}>
         <div className={styles.formRow}>
           <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor="settingsName">Display Name</label>
+            <label className={styles.label} htmlFor="settingsName">Name</label>
             <input
               id="settingsName"
               type="text"
@@ -78,10 +81,14 @@ export function SettingsPage() {
           </div>
         </div>
 
-        {error && <p style={{ color: '#ef4444', fontSize: '0.875rem', margin: 0 }}>{error}</p>}
+        {error && (
+          <div className={styles.formError}>
+            {error}
+          </div>
+        )}
 
-        <button type="submit" className={styles.submitBtn} disabled={saving} style={{ width: 'fit-content' }}>
-          {saved ? <><Check size={18} /> Saved!</> : saving ? 'Saving…' : <><Save size={18} /> Save Changes</>}
+        <button type="submit" className={styles.submitBtn} disabled={saving}>
+          {saved ? <><Check size={18} /> Saved!</> : saving ? 'Saving…' : <>Save Changes</>}
         </button>
       </form>
     </div>

@@ -21,9 +21,9 @@ export function HomeNavigation() {
     <header className={styles.header}>
       <div className={shellClassName}>
         <div className={styles.navRow}>
-          <Link to="/" className={styles.brand}>
+          <div className={styles.brand}>
             Tag & Trail
-          </Link>
+          </div>
 
           <div className={styles.desktopLinks}>
             {!isScrolled && (

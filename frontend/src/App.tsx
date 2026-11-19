@@ -1,6 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthenticationDialog } from './components/auth/AuthenticationDialog';
-import { AppBackground } from './components/layout/AppBackground';
 import { AuthProvider } from './context/AuthProvider';
 import { AuthenticatedRoute } from './routes/AuthenticatedRoute';
 import { Layout } from './components/layout/Layout';
@@ -20,7 +19,6 @@ const AppContent = () => {
 
   return (
     <>
-      <AppBackground />
       <HomePage />
       {authMode && <AuthenticationDialog mode={authMode} />}
     </>

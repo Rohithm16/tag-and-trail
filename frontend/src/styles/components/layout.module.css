@@ -1,0 +1,237 @@
+/* ─── Layout ────────────────────────────────────────────────────────────────
+   Covers: app shell, sidebar, nav links, profile section, main area,
+   content wrapper, and shared page-level utilities (stack, titleRow, etc.)
+   Used by: Layout.tsx + every authenticated page
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* ── App shell ── */
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: transparent;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-width);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
+  color: var(--color-ink-soft);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+}
+
+.sidebarHeader {
+  margin-bottom: 2.5rem;
+  text-align: center;
+  width: 100%;
+}
+
+/* Brand — gradient text via Source Serif 4 */
+.brand {
+  font-size: 1.6rem;
+  font-weight: 500;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+}
+
+/* ── Sidebar navigation ── */
+.sidebarNav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.navLink {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-md);
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  font-weight: 400;
+  font-size: 0.95rem;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.navLink:hover {
+  background: rgba(37, 99, 235, 0.06);
+  transform: translateX(2px);
+}
+
+.navLinkActive {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  font-weight: 500;
+}
+
+.navIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+/* ── Profile section ── */
+.profileSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 0;
+  margin: 0.5rem 0;
+  width: 100%;
+  box-sizing: border-box;
+  border-top: 1px solid var(--color-border-soft);
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.profileAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  color: white;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  gap: 0.1rem;
+}
+
+.profileName {
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--color-ink-soft);
+}
+
+.profileEmail {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-muted);
+  word-break: break-all;
+  max-width: 100%;
+}
+
+/* ── Sidebar footer / logout ── */
+.sidebarFooter {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: var(--color-danger-dark);
+  font-weight: 500;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.logoutBtn:hover {
+  background: var(--color-danger-soft);
+}
+
+/* ── Main content area ── */
+.main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  overflow-x: hidden;
+}
+
+.content {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 2.25rem 2.5rem 4rem;
+}
+
+/* ── Shared page-level layout utilities ── */
+
+/* Vertical stack — wraps every page's top-level sections */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* Row with title on the left, optional action on the right */
+.titleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Gradient heading used on every page */
+.pageTitle {
+  font-size: 1.9rem;
+  font-weight: 300;
+  margin: 0;
+  letter-spacing: -0.025em;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-weight: 400;
+  color: var(--color-muted);
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .main {
+    margin-left: 0;
+  }
+
+  .content {
+    padding: 1.5rem;
+  }
+}

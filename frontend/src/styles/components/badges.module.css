@@ -1,0 +1,52 @@
+/* ─── Badges ────────────────────────────────────────────────────────────────
+   Tag badges, status indicators, and status dots.
+   Used by: DashboardPage.tsx, UploadPage.tsx, TrashPage.tsx
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* ── Tag list wrapper ── */
+.tags {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/* ── Individual tag badge ── */
+.badge {
+  padding: 0.2rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 400;
+  border-radius: 100px;
+  text-transform: capitalize;
+  background: var(--color-surface-alt);
+  color: var(--color-ink-soft);
+  border: 1px solid var(--color-border-soft);
+}
+
+/* ── Status badge (Clear / Malicious) ── */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 500;
+  font-size: 0.78rem;
+  color: var(--color-ink-soft);
+}
+
+/* ── Status indicator dots ── */
+.statusDotGreen {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px var(--color-success-soft);
+}
+
+.statusDotRed {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  box-shadow: 0 0 0 3px var(--color-danger-soft);
+}

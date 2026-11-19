@@ -20,6 +20,9 @@ class DocumentOut(BaseModel):
     flags: List[str]
     is_deleted: bool
     created_at: datetime
+    # True only for safe PDFs that still have a file stored server-side —
+    # drives whether the frontend shows View/Download for this item.
+    has_file: bool = False
 
     class Config:
         from_attributes = True

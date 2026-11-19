@@ -91,7 +91,13 @@ def _is_bad_title(title: str) -> bool:
     if not title:
         return True
     bad = ["error", "not found", "404", "403", "access denied", "forbidden",
-           "captcha", "just a moment", "enable javascript", "redirecting", "loading"]
+           "captcha", "just a moment", "enable javascript", "redirecting", "loading",
+           # Generic placeholder titles served by JS-required interstitials
+           # (e.g. Google's search results require JS; a plain HTTP fetch
+           # gets served a stub page with this exact title instead of real
+           # content) — these aren't real page titles, so don't let them
+           # through as if they were.
+           "google search"]
     return any(phrase in title.lower() for phrase in bad)
 
 
@@ -111,10 +117,22 @@ def extract_metadata_from_url(url: str) -> dict:
 
         soup = BeautifulSoup(r.text, "html.parser")
 
-        # Title candidates
+        # Title candidates.
+        #
+        # NOTE: soup.title.get_text() is used instead of soup.title.string —
+        # .string only returns text when a tag has exactly one child text
+        # node; the instant a <title> is parsed with any nested structure
+        # (common on many real-world pages, e.g. Google's search results),
+        # .string silently returns None even though the tag clearly has
+        # visible text. That was previously causing this candidate to fail
+        # and fall through to the URL-path fallback below, which for a URL
+        # like google.com/search?... produces just the single word "search"
+        # — too short to ever clear the tag-generation word-count gate.
+        # get_text() always returns the concatenated text regardless of
+        # internal structure, so this candidate no longer fails spuriously.
         for candidate_fn in [
             lambda: soup.find("meta", property="og:title") and soup.find("meta", property="og:title").get("content"),
-            lambda: soup.title and soup.title.string,
+            lambda: soup.title.get_text() if soup.title else None,
             lambda: soup.find("h1") and soup.find("h1").get_text(),
             lambda: _title_from_url(url),
         ]:

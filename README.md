@@ -1,6 +1,6 @@
 # Tag & Trail
 
-Tag & Trail is a document and link analysis platform. Submit a URL or a PDF and it runs a security scan (malicious link/file detection), extracts metadata, and generates descriptive tags automatically — then indexes everything so you can search and manage what you've scanned.
+Tag & Trail is a document and link analysis platform. Submit a URL or a PDF and it runs a security scan (malicious link/file detection), extracts metadata, and generates descriptive tags automatically and then indexes everything so you can search and manage what you've scanned.
 
 ## Features
 
@@ -85,7 +85,3 @@ tag-and-trail/
         ├── pages/          # Dashboard, Upload, Trash, Settings
         └── routes/         # route guards
 ```
-
-## License
-
-Add your license of choice here.

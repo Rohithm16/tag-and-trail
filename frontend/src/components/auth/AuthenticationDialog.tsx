@@ -66,6 +66,17 @@ export function AuthenticationDialog({ mode }: { mode: AuthMode }) {
     navigate('/dashboard');
   };
 
+  // On signup, Guest/Login swap colors vs signin (Guest becomes the darker
+  // shade, Login/alternate becomes the lighter shade).
+  const guestClass = mode === 'signup' ? styles.alternateShadeBtn : styles.guestBtn;
+  const alternateClass = mode === 'signup' ? styles.guestShadeBtn : styles.alternateBtn;
+
+  const guestBtn = (
+    <button type="button" onClick={handleGuest} className={guestClass}>
+      Try as Guest
+    </button>
+  );
+
   return (
     <Dialog.Root open onOpenChange={(open) => !open && handleClose()}>
       <Dialog.Portal>
@@ -124,36 +135,16 @@ export function AuthenticationDialog({ mode }: { mode: AuthMode }) {
               </button>
             </form>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-0.3rem 0' }}>
-              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-              <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>or</span>
-              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGuest}
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                borderRadius: '0.45rem',
-                border: '1px solid #e2e8f0',
-                background: 'transparent',
-                color: '#334155',
-                fontWeight: 500,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-              }}
-            >
-              Try as Guest
-            </button>
+            {mode === 'signup' && guestBtn}
 
             <div>
               <p className={styles.alternateLabel}>{copy.alternateText}</p>
-              <Link to={copy.alternateHref} className={styles.alternateBtn}>
+              <Link to={copy.alternateHref} className={alternateClass}>
                 {copy.alternateAction}
               </Link>
             </div>
+
+            {mode === 'signin' && guestBtn}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

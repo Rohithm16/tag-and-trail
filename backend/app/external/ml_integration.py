@@ -1,44 +1,38 @@
 """ML model integration — runs URL or PDF through the local models + optional VirusTotal."""
-import os
-
 from app.models.pdf_model.processing import predict_pdf
-from app.models.url_model.processing import tag_and_trail_inference
+from app.models.url_model.predict import get_threshold, score_urls
 from app.external.virustotal import scan_file, scan_url
-
-# Labels that trigger a VirusTotal follow-up scan
-_MALICIOUS_URL_LABELS = {"Defacement", "Malware", "Phishing"}
 
 
 def run_url_model(url: str) -> dict:
-    """Run LSTM+CNN ensemble on a URL. Returns prediction dict."""
-    try:
-        result = tag_and_trail_inference(url)
-        label = result["class"]
-        confidence = result["confidence"]
-        print("Predicted label:", label)
+    """Score a URL with LightGBM and enrich malicious results with VirusTotal.
 
-        malicious_probability = (1 - confidence) if label == "Safe" else confidence
-        is_malicious = label != "Safe"
+    The CNN/LSTM artifacts remain available in ``url_model`` but are no longer
+    imported or loaded by the application.
+    """
+    try:
+        malicious_probability = float(score_urls([url])[0])
+        threshold = get_threshold()
+        is_malicious = malicious_probability >= threshold
 
         response = {
-            "prediction": label,
+            "prediction": "Malicious" if is_malicious else "Safe",
             "is_malicious": is_malicious,
             "malicious_probability": round(malicious_probability, 4),
             "risk_level": _risk_from_prob(malicious_probability),
+            "model": "lightgbm",
+            "model_threshold": round(threshold, 4),
         }
 
-        # Override with VirusTotal if available
-        if label in _MALICIOUS_URL_LABELS:
+        # VirusTotal is the reputation confirmation for local positives.
+        # A completed clean result prevents false positives from the lexical
+        # model; errors or an unavailable API leave the local verdict intact.
+        if is_malicious:
             vt = scan_url(url)
             response.update(vt)
-
-            if "virustotal" in vt:
-                stats = vt["virustotal"]
-
-                malicious = stats.get("malicious", 0)
-                suspicious = stats.get("suspicious", 0)
-
-                if malicious > 0 or suspicious > 0:
+            stats = vt.get("virustotal")
+            if stats:
+                if stats.get("malicious", 0) > 0 or stats.get("suspicious", 0) > 0:
                     response["prediction"] = "Malicious"
                     response["is_malicious"] = True
                     response["risk_level"] = "HIGH"

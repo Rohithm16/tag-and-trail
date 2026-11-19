@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&display=swap');
-
+/* Font loaded globally in styles/global.css — no @import needed here */
 .header {
   position: fixed;
   top: 0;
@@ -42,7 +41,6 @@
 
 /* Logo – thicker than before, slightly larger */
 .brand {
-  font-family: 'Source Serif 4', serif;
   font-size: 1.8rem;
   font-weight: 500;
   text-decoration: none;
@@ -52,9 +50,6 @@
   background-clip: text;
 }
 
-.brand:hover {
-  opacity: 0.8;
-}
 
 .desktopLinks {
   display: flex;
@@ -72,23 +67,17 @@
 }
 
 .primaryBtn {
-  background: #0f172a;
+  background: #000000;
   color: white;
 }
 
-.primaryBtn:hover {
-  background: #1e293b;
-}
 
 .secondaryBtn {
   background: white;
-  color: #0f172a;
+  color: #000000;
   border: 1px solid #cbd5e1;
 }
 
-.secondaryBtn:hover {
-  background: #f8fafc;
-}
 
 .burgerBtn {
   display: none;
@@ -133,7 +122,6 @@
 }
 
 .drawerTitle {
-  font-family: 'Source Serif 4', serif;
   font-weight: 400;
   font-size: 1.5rem;
   background: linear-gradient(135deg, #60a5fa, #67e8f9, #93c5fd);

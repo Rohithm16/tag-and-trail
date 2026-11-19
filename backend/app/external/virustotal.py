@@ -41,11 +41,12 @@ def scan_file(file_path: str) -> dict:
 
 
 def scan_url(url: str) -> dict:
-    print("scan_url() called")
     if not settings.VT_API_KEY or settings.VT_API_KEY == "your_virustotal_api_key_here":
         return {"virustotal_skipped": "No VT API key configured"}
     try:
         submit = requests.post(VT_URL_SCAN, headers=_vt_headers(), data={"url": url}, timeout=15)
+        if submit.status_code not in (200, 201):
+            return {"virustotal_error": f"URL submission failed: {submit.status_code}"}
         analysis_id = submit.json()["data"]["id"]
         time.sleep(15)
         report = requests.get(
@@ -53,11 +54,8 @@ def scan_url(url: str) -> dict:
             headers=_vt_headers(),
             timeout=15,
         )
-        print("Submit status:", submit.status_code)
-        print("Submit response:", submit.text)
-        
-        print("Report status:", report.status_code)
-        print(report.text)
+        if report.status_code != 200:
+            return {"virustotal_error": f"URL analysis lookup failed: {report.status_code}"}
         stats = report.json()["data"]["attributes"]["stats"]
         return {"virustotal": {k: stats.get(k, 0) for k in ("malicious", "suspicious", "harmless", "undetected")}}
     except Exception as e:

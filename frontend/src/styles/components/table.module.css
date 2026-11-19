@@ -1,0 +1,178 @@
+/* ─── Table ─────────────────────────────────────────────────────────────────
+   Full data table including the source link/inert cells and date cells.
+   Used by: DashboardPage.tsx, TrashPage.tsx
+   Also used (source cell classes) by: DocumentSource.tsx
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* ── Table wrapper ── */
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-soft);
+}
+
+/* ── Table ── */
+.table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.88rem;
+}
+
+.table thead tr {
+  background: var(--color-surface-alt);
+}
+
+.table th {
+  text-align: left;
+  padding: 0.85rem 0.8rem;
+  font-weight: 500;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th:first-child { padding-left: 1.2rem; }
+.table th:last-child  { padding-right: 1.2rem; }
+
+.table tbody tr {
+  background: var(--color-surface);
+  transition: background 0.15s ease;
+}
+
+.table tbody tr:nth-child(even) {
+  background: #fbfcfd;
+}
+
+.table tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.table td {
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--color-border-soft);
+  vertical-align: middle;
+}
+
+.table td:first-child { padding-left: 1.2rem; }
+.table td:last-child  { padding-right: 1.2rem; }
+
+/* ── Item cell (icon + title + type) ── */
+.itemCell {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.itemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.itemTitle {
+  font-weight: 500;
+  display: block;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+  line-height: 1.3;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemType {
+  font-size: 0.63rem;
+  color: var(--color-muted-soft);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Source cell — link / inert / muted ── */
+.sourceLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-primary);
+  font-weight: 400;
+  font-size: 0.83rem;
+  text-decoration: none;
+  max-width: 230px;
+}
+
+.sourceLink:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+.sourceLink svg {
+  flex-shrink: 0;
+}
+
+.sourceLinkText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Malicious link — visible for triage but never clickable */
+.sourceInert {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-danger-dark);
+  font-weight: 400;
+  font-size: 0.83rem;
+  max-width: 230px;
+  cursor: not-allowed;
+}
+
+.sourceInert .sourceLinkText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: line-through;
+  text-decoration-color: rgba(239, 68, 68, 0.45);
+}
+
+/* PDF not-available fallback */
+.sourceMuted {
+  font-size: 0.8rem;
+  color: var(--color-muted-soft);
+  font-style: italic;
+}
+
+/* ── Date cell ── */
+.dateCell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dateIcon {
+  color: var(--color-muted-soft);
+}
+
+.date {
+  font-size: 0.82rem;
+  color: var(--color-ink-soft);
+  font-weight: 400;
+}
+
+/* ── Empty table row ── */
+.emptyMessage {
+  text-align: center;
+  color: var(--color-muted-soft);
+  padding: 2.5rem 0;
+}

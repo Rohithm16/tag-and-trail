@@ -1,0 +1,105 @@
+/* ─── Cards ─────────────────────────────────────────────────────────────────
+   Surface containers used across Dashboard, Upload, Trash, and Settings.
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* ── Activity / result card ── */
+.activityCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.activityHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.35rem;
+}
+
+.activityTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  letter-spacing: -0.015em;
+}
+
+/* ── Settings profile card ── */
+.settingsCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.userInfoRow {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.userAvatarLarge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  color: white;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.userName {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.userContact {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.contactIcon {
+  color: var(--color-muted-soft);
+}
+
+/* ── Empty state (Trash, etc.) ── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-muted-soft);
+}
+
+.emptyStateIcon {
+  color: var(--color-border);
+}
+
+.emptyStateText {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 400;
+}

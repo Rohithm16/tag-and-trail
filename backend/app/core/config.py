@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +10,15 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str = "change_me_in_production"
     DEBUG: bool = True
+    FRONTEND_ORIGIN: str = "http://localhost:5173"
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug_mode(cls, value):
+        """Accept deployment-style values such as ``DEBUG=release``."""
+        if isinstance(value, str) and value.strip().lower() in {"release", "production", "prod"}:
+            return False
+        return value
 
     # JWT
     JWT_SECRET_KEY: str = "change_this_jwt_secret_in_production"

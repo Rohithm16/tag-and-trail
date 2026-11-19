@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Loader } from 'lucide-react';
-import styles from '../App.module.css';
+import styles from '../styles/components/layout.module.css';
 import { useAuth } from '../context/useAuth';
 
 export function AuthenticatedRoute({ children }: PropsWithChildren) {

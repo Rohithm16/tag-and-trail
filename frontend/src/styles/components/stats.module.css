@@ -1,0 +1,68 @@
+/* ─── Stats Group ───────────────────────────────────────────────────────────
+   Gradient stats banner shown at the top of the Dashboard.
+   Used by: DashboardPage.tsx
+   ─────────────────────────────────────────────────────────────────────── */
+
+.statsGroup {
+  display: flex;
+  background: var(--gradient-brand);
+  padding: calc(1.5rem * 1.5);
+  border-radius: var(--radius-lg);
+  color: white;
+  flex-wrap: wrap;
+}
+
+.statItem {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 1.5rem;
+}
+
+.statItemBorder {
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.statValue {
+  display: block;
+  font-size: 2.2rem;
+  line-height: 1;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: white;
+}
+
+.statTitle {
+  display: block;
+  text-transform: uppercase;
+  font-weight: 500;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  color: white;
+  margin-bottom: 0.3rem;
+}
+
+.statDescription {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: white;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .statsGroup {
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .statItem {
+    padding: 0;
+  }
+
+  .statItemBorder {
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    padding-top: 1.5rem;
+  }
+}

@@ -2,6 +2,7 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
@@ -11,6 +12,7 @@ from app.models.user import User
 from app.repositories import document_repository
 from app.schemas.document import DocumentOut, StatsOut
 from app.services import document_service
+from app.core.url_safety import normalize_url
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -29,12 +31,16 @@ async def upload(
         raise HTTPException(status_code=400, detail="Provide only one: URL or file")
 
     if url:
+        try:
+            normalized_url = normalize_url(url)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         # CPU-bound pipeline (ML inference + NLP tagging) — must be offloaded
         # to a worker thread, otherwise it blocks the entire event loop and
         # every other request (dashboard list, trash, auth/me) stalls until
         # this finishes.
         result = await run_in_threadpool(
-            document_service.process_url, url.strip(), current_user.id, db
+            document_service.process_url, normalized_url, current_user.id, db
         )
     else:
         if not file.filename.lower().endswith(".pdf"):
@@ -67,9 +73,13 @@ async def guest_scan(
     """
     if not url or not url.strip():
         raise HTTPException(status_code=400, detail="Provide a URL")
+    try:
+        normalized_url = normalize_url(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     result = await run_in_threadpool(
-        document_service.process_url, url.strip(), None, db, False
+        document_service.process_url, normalized_url, None, db, False
     )
     return result
 
@@ -132,3 +142,34 @@ def hard_delete(
     if not success:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"message": "Permanently deleted"}
+
+
+@router.get("/{doc_id}/file")
+def get_file(
+    doc_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Serve a stored PDF for viewing or downloading.
+
+    Only ever available for safe PDFs — malicious files are never written
+    to disk (see document_service.process_pdf), so this 404s for them the
+    same as if the file simply didn't exist. Uses inline disposition so a
+    plain new-tab open renders the PDF instead of forcing a download; the
+    frontend's explicit "Download" action sets its own filename via the
+    HTML `download` attribute on the client side.
+    """
+    doc = document_repository.get_by_id(db, doc_id, current_user.id)
+    if not doc or doc.source_type != "pdf" or not doc.file_path:
+        raise HTTPException(status_code=404, detail="File not available")
+
+    import os
+    if not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=404, detail="File not available")
+
+    safe_name = (doc.source_url or "document.pdf").replace('"', "")
+    return FileResponse(
+        doc.file_path,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{safe_name}"'},
+    )

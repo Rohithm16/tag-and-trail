@@ -1,0 +1,243 @@
+/* ─── Forms ─────────────────────────────────────────────────────────────────
+   All form-related styles: upload form, mode toggle, dropzone,
+   text inputs, error/processing notices, submit button, and result display.
+   Used by: UploadPage.tsx, SettingsPage.tsx
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* ── Form container ── */
+.uploadForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+/* ── Field ── */
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-ink-soft);
+}
+
+.input {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  font-weight: 400;
+  background: var(--color-surface-alt);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* ── Mode toggle (Link / PDF) ── */
+.modeToggle {
+  display: inline-flex;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  padding: 0.25rem;
+  width: fit-content;
+}
+
+.modeToggleBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  font-weight: 400;
+  font-size: 0.85rem;
+  background: transparent;
+  color: var(--color-ink-soft);
+  transition: all 0.15s ease;
+}
+
+.modeToggleBtnActive {
+  background: var(--gradient-brand);
+  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.2);
+  color: white;
+  font-weight: 500;
+}
+
+/* ── Dropzone ── */
+.dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2.25rem 1.5rem;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dropzoneIcon {
+  color: var(--color-muted-soft);
+}
+
+.dropzoneText {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.browseLink {
+  color: var(--color-primary);
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+/* Hidden file input covering the entire dropzone */
+.fileInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ── File preview (after selection) ── */
+.filePreview {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.removeFileBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-border-soft);
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.removeFileBtn:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-dark);
+}
+
+/* ── Inline error banner ── */
+.formError {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-danger-dark);
+  font-size: 0.85rem;
+  font-weight: 400;
+  background: var(--color-danger-soft);
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+}
+
+/* ── Processing notice ── */
+.processingNotice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.9rem;
+}
+
+/* ── Submit button ── */
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.4rem;
+  background: var(--gradient-brand);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+  width: fit-content;
+}
+
+.submitBtn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.submitBtn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.submitBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── Upload result meta ── */
+.resultMetaRow {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.riskLabelSafe   { color: var(--color-success); font-weight: 600; }
+.riskLabelMedium { color: var(--color-warning);  font-weight: 600; }
+.riskLabelHigh   { color: var(--color-danger);   font-weight: 600; }
+
+.flagsNote {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+}

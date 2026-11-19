@@ -1,7 +1,7 @@
 import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom';
 import { Home, UploadCloud, Trash2, Sliders, LogOut, User } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
-import styles from '../../App.module.css';
+import styles from '../../styles/components/layout.module.css';
 
 const navItems = [
   { label: 'Home', icon: Home, href: '/dashboard' },

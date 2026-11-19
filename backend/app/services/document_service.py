@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional
 from uuid import UUID
@@ -18,10 +19,16 @@ from app.engine.engine import generate_tags
 from app.external.ml_integration import run_pdf_model, run_url_model
 from app.processing.metadata import extract_metadata_from_pdf, extract_metadata_from_url
 from app.repositories import document_repository
-from app.core.url_safety import is_public_resource
+from app.core.url_safety import normalize_url
 
 
 MAX_FILE_BYTES = settings.MAX_FILE_SIZE_MB * 1024 * 1024
+
+# Where safe PDFs are kept so they can be viewed/downloaded later. Malicious
+# PDFs are never written here — they're deleted right after scanning, same
+# as before this feature existed.
+STORAGE_DIR = Path(__file__).resolve().parent.parent / "storage" / "uploads"
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def process_url(url: str, user_id: Optional[UUID], db: Session, persist: bool = True) -> dict:
@@ -32,6 +39,8 @@ def process_url(url: str, user_id: Optional[UUID], db: Session, persist: bool = 
     the database, and no user_id is required. Used for guest mode, which
     has no account to attach a row to.
     """
+
+    url = normalize_url(url)
 
     # 1. Security scan
     ml_result = run_url_model(url)
@@ -64,6 +73,7 @@ def process_url(url: str, user_id: Optional[UUID], db: Session, persist: bool = 
         malicious_probability=ml_result.get("malicious_probability"),
         vt_stats=ml_result.get("virustotal"),
         flags=[],
+        file_path=None,
     )
 
     if persist:
@@ -84,11 +94,16 @@ def process_url(url: str, user_id: Optional[UUID], db: Session, persist: bool = 
 
 
 def process_pdf(file_bytes: bytes, filename: str, user_id: UUID, db: Session) -> dict:
-    """Run the full pipeline for an uploaded PDF."""
+    """Run the full pipeline for an uploaded PDF.
+
+    Safe PDFs get copied into permanent storage so they can be viewed or
+    downloaded later. Malicious PDFs are analysed the same way but the
+    file itself is deleted immediately afterwards — it's never kept on
+    disk, and no view/download is ever offered for it.
+    """
     if len(file_bytes) > MAX_FILE_BYTES:
         raise ValueError(f"File exceeds {settings.MAX_FILE_SIZE_MB} MB limit")
 
-    # Write to temp file for model processing
     tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     tmp.write(file_bytes)
     tmp.flush()
@@ -112,9 +127,18 @@ def process_pdf(file_bytes: bytes, filename: str, user_id: UUID, db: Session) ->
             except Exception:
                 tags = []
 
-        # 4. Persist
+        # 4. Persist the file itself — safe PDFs only
+        doc_id = uuid.uuid4()
+        file_path: Optional[str] = None
+        if not is_malicious:
+            dest = STORAGE_DIR / f"{doc_id}.pdf"
+            shutil.copy(tmp.name, dest)
+            file_path = str(dest)
+
+        # 5. Persist the DB row
         doc = document_repository.create(
             db,
+            id=doc_id,
             user_id=user_id,
             source_type="pdf",
             source_url=filename,
@@ -127,6 +151,7 @@ def process_pdf(file_bytes: bytes, filename: str, user_id: UUID, db: Session) ->
             malicious_probability=ml_result.get("malicious_probability"),
             vt_stats=ml_result.get("virustotal"),
             flags=ml_result.get("flags", []),
+            file_path=file_path,
         )
 
         return _doc_to_dict(doc)
@@ -151,4 +176,5 @@ def _doc_to_dict(doc) -> dict:
         "flags": doc.flags or [],
         "is_deleted": doc.is_deleted,
         "created_at": doc.created_at.isoformat(),
+        "has_file": bool(getattr(doc, "file_path", None)),
     }

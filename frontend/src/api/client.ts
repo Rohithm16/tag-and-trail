@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 function getToken(): string | null {
   return localStorage.getItem("tt_token");
@@ -20,6 +20,39 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+// A plain <a href> navigation or new-tab open never carries our
+// localStorage-based JWT (only our fetch() calls attach it manually), so
+// viewing/downloading a stored PDF has to go through an authenticated
+// fetch that returns the raw bytes, not through direct links.
+async function requestBlob(path: string): Promise<Blob> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE_URL}${path}`, { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail ?? "Request failed");
+  }
+  return res.blob();
+}
+
+function openBlob(blob: Blob, mode: "view" | "download", filename: string) {
+  const url = URL.createObjectURL(blob);
+  if (mode === "view") {
+    window.open(url, "_blank", "noopener,noreferrer");
+  } else {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "document.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  // Give the browser a moment to actually open/save it before revoking.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
@@ -72,8 +105,7 @@ export const api = {
 
     // Unauthenticated, ephemeral scan for guest mode — runs the same
     // pipeline as uploadUrl but hits a route with no auth requirement and
-    // nothing gets persisted server-side. Guest results only ever live in
-    // the frontend's in-memory guestDocs.
+    // nothing gets persisted server-side.
     guestScanUrl: (url: string) => {
       const form = new FormData();
       form.append("url", url);
@@ -92,6 +124,19 @@ export const api = {
 
     hardDelete: (id: string) =>
       request<{ message: string }>(`/api/documents/${id}/permanent`, { method: "DELETE" }),
+
+    // Opens a stored PDF in a new tab. Only ever available when
+    // has_file is true (safe PDFs only — see document_service.py).
+    viewFile: async (id: string) => {
+      const blob = await requestBlob(`/api/documents/${id}/file`);
+      openBlob(blob, "view", "document.pdf");
+    },
+
+    // Forces a save-as download of the same file.
+    downloadFile: async (id: string, filename: string) => {
+      const blob = await requestBlob(`/api/documents/${id}/file`);
+      openBlob(blob, "download", filename);
+    },
   },
 };
 
@@ -112,6 +157,8 @@ export interface Document {
   flags: string[];
   is_deleted: boolean;
   created_at: string;
+  /** True only for safe PDFs that still have a file stored server-side. */
+  has_file: boolean;
 }
 
 export interface Stats {

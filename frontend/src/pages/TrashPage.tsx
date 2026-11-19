@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import { File, Link as LinkIcon, Calendar, RotateCcw, XCircle, Trash2, Loader } from 'lucide-react';
-import styles from '../App.module.css';
+import layoutStyles from '../styles/components/layout.module.css';
+import tableStyles from '../styles/components/table.module.css';
+import cardStyles from '../styles/components/cards.module.css';
+import badgeStyles from '../styles/components/badges.module.css';
+import buttonStyles from '../styles/components/buttons.module.css';
+const styles = { ...layoutStyles, ...tableStyles, ...cardStyles, ...badgeStyles, ...buttonStyles };
 import { api, type Document } from '../api/client';
 import { useAuth } from '../context/useAuth';
+import { DocumentSource } from '../components/documents/DocumentSource';
 
 export function TrashPage() {
   const { isGuest } = useAuth();
@@ -10,7 +16,7 @@ export function TrashPage() {
   const [loading, setLoading] = useState(!isGuest);
 
   useEffect(() => {
-    if (isGuest) return; // guests have no server-side trash
+    if (isGuest) return;
     api.documents.trash()
       .then(setItems)
       .catch(console.error)
@@ -38,7 +44,7 @@ export function TrashPage() {
   if (loading) {
     return (
       <div className={styles.stack} style={{ alignItems: 'center', paddingTop: 60 }}>
-        <Loader size={32} style={{ animation: 'spin 1s linear infinite', color: '#6366f1' }} />
+        <Loader size={32} style={{ animation: 'spin 1s linear infinite', color: '#2563eb' }} />
       </div>
     );
   }
@@ -64,6 +70,7 @@ export function TrashPage() {
               <thead>
                 <tr>
                   <th>Item</th>
+                  <th>Source</th>
                   <th>Tags</th>
                   <th>Status</th>
                   <th>Date</th>
@@ -78,8 +85,13 @@ export function TrashPage() {
                       <td>
                         <div className={styles.itemCell}>
                           <div className={styles.itemIcon}><Icon size={16} /></div>
-                          <span className={styles.itemTitle}>{item.title || item.source_url || '—'}</span>
+                          <span className={styles.itemTitle} title={item.title || item.source_url || '—'}>
+                            {item.title || item.source_url || '—'}
+                          </span>
                         </div>
+                      </td>
+                      <td>
+                        <DocumentSource item={item} />
                       </td>
                       <td>
                         <div className={styles.tags}>

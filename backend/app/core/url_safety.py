@@ -1,10 +1,57 @@
 """SSRF protection + login-wall detection helpers (kept separate from JWT security)."""
 import re
 import socket
+import ipaddress
 
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+
+
+def normalize_url(url: str) -> str:
+    """Normalize a user-entered web URL before it reaches the pipeline.
+
+    Accepts bare domains, domains with www, scheme-relative URLs, and URLs
+    with http/https.  Bare entries are assumed to use https.
+    """
+    value = (url or "").strip()
+    if not value:
+        raise ValueError("A URL is required")
+
+    if any(char.isspace() for char in value):
+        raise ValueError("URL must not contain whitespace")
+
+    if value.startswith("//"):
+        value = "https:" + value
+    elif not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", value):
+        value = "https://" + value
+
+    parsed = urlparse(value)
+    if parsed.scheme.lower() not in ("http", "https"):
+        raise ValueError("Only HTTP and HTTPS URLs are supported")
+    if not parsed.hostname:
+        raise ValueError("Enter a valid URL")
+    if parsed.username or parsed.password:
+        raise ValueError("URLs containing credentials are not supported")
+
+    hostname = parsed.hostname.strip(".").lower()
+    if not hostname:
+        raise ValueError("Enter a valid URL")
+
+    try:
+        ipaddress.ip_address(hostname)
+    except ValueError:
+        if hostname == "localhost":
+            pass
+        elif "." not in hostname or len(hostname) > 253:
+            raise ValueError("Enter a valid domain name")
+
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("Enter a valid URL port") from exc
+
+    return value
 
 
 def is_private_ip(hostname: str) -> bool:

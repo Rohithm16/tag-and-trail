@@ -3,19 +3,16 @@ import {
   UploadCloud, Link as LinkIcon, File, X,
   CheckCircle, AlertTriangle, Loader, Clock,
 } from 'lucide-react';
-import styles from '../App.module.css';
-import { type Document } from '../api/client';
+import layoutStyles from '../styles/components/layout.module.css';
+import cardStyles from '../styles/components/cards.module.css';
+import formStyles from '../styles/components/forms.module.css';
+import badgeStyles from '../styles/components/badges.module.css';
+const styles = { ...layoutStyles, ...cardStyles, ...formStyles, ...badgeStyles };
 import { useAuth } from '../context/useAuth';
 import { startUpload, resetUpload, useUploadState } from '../state/uploadStore';
+import { uploadEventBus } from '../state/uploadEventBus';
 
 type UploadMode = 'link' | 'pdf';
-
-// Global event so Dashboard can listen for new docs without blocking
-export const uploadEventBus = {
-  listeners: new Set<(doc: Document) => void>(),
-  emit(doc: Document) { this.listeners.forEach((fn) => fn(doc)); },
-  on(fn: (doc: Document) => void) { this.listeners.add(fn); return () => this.listeners.delete(fn); },
-};
 
 export function UploadPage() {
   const { isGuest, addGuestDoc } = useAuth();
@@ -39,8 +36,6 @@ export function UploadPage() {
   const handleModeChange = (m: UploadMode) => {
     setMode(m);
     setFormError('');
-    // Don't clear a result/error that belongs to an upload still in
-    // flight or just finished — only clear stale display state.
     if (status !== 'processing') resetUpload();
   };
 
@@ -54,23 +49,19 @@ export function UploadPage() {
 
     const payload = mode === 'link' ? link.trim() : file!;
 
-    // Fire-and-forget from the component's perspective: the store keeps
-    // running this even if the user navigates away, so status is never
-    // lost — startUpload updates the shared store, which any mounted
-    // page (including this one, if you come back) reads from.
     startUpload(mode, payload, (doc) => {
       if (isGuest) addGuestDoc(doc);
-      uploadEventBus.emit(doc); // notify Dashboard
+      uploadEventBus.emit(doc);
     }, isGuest);
 
     setLink('');
     setFile(null);
   };
 
-  const riskColor = (level: string | null) => {
-    if (level === 'HIGH') return '#ef4444';
-    if (level === 'MEDIUM') return '#f97316';
-    return '#22c55e';
+  const riskClass = (level: string | null) => {
+    if (level === 'HIGH') return styles.riskLabelHigh;
+    if (level === 'MEDIUM') return styles.riskLabelMedium;
+    return styles.riskLabelSafe;
   };
 
   return (
@@ -85,21 +76,13 @@ export function UploadPage() {
         </div>
       </div>
 
-      {/* Mode toggle */}
-      <div style={{ display: 'flex', gap: 0, background: '#f1f5f9', borderRadius: 8, padding: 3, width: 'fit-content' }}>
+      <div className={styles.modeToggle}>
         {(['link', 'pdf'] as UploadMode[]).map((m) => (
           <button
             key={m}
             type="button"
             onClick={() => handleModeChange(m)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer',
-              fontWeight: 500, fontSize: '0.875rem',
-              background: mode === m ? 'white' : 'transparent',
-              boxShadow: mode === m ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              color: '#334155',
-            }}
+            className={`${styles.modeToggleBtn} ${mode === m ? styles.modeToggleBtnActive : ''}`}
           >
             {m === 'link' ? <LinkIcon size={14} /> : <File size={14} />}
             {m === 'link' ? 'Link / URL' : 'PDF File'}
@@ -115,7 +98,7 @@ export function UploadPage() {
             </label>
             <input
               id="linkInput"
-              type="url"
+              type="text"
               className={styles.input}
               placeholder="https://example.com/article"
               value={link}
@@ -127,7 +110,7 @@ export function UploadPage() {
             <label className={styles.label}><File size={16} /> PDF Document</label>
             <div
               className={styles.dropzone}
-              style={{ borderColor: dragging ? '#6366f1' : undefined }}
+              style={{ borderColor: dragging ? '#2563eb' : undefined }}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
@@ -158,13 +141,13 @@ export function UploadPage() {
         )}
 
         {formError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontSize: '0.875rem' }}>
+          <div className={styles.formError}>
             <AlertTriangle size={16} /> {formError}
           </div>
         )}
 
         {status === 'error' && uploadError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontSize: '0.875rem' }}>
+          <div className={styles.formError}>
             <AlertTriangle size={16} /> {uploadError}
           </div>
         )}
@@ -177,29 +160,28 @@ export function UploadPage() {
       </form>
 
       {processing && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748b', fontSize: '0.875rem' }}>
+        <div className={styles.processingNotice}>
           <Clock size={16} />
           Analysis running in background — you can navigate away and come back, this will still be here.
         </div>
       )}
 
-      {/* Result card */}
       {status === 'done' && result && (
         <div className={styles.activityCard}>
           <div className={styles.activityHeader}>
             <h2 className={styles.activityTitle}>
               {result.is_malicious
                 ? <><AlertTriangle size={18} style={{ color: '#ef4444', marginRight: 6 }} />Malicious Content Detected</>
-                : <><CheckCircle size={18} style={{ color: '#22c55e', marginRight: 6 }} />Indexed Successfully</>}
+                : <><CheckCircle size={18} style={{ color: '#16a34a', marginRight: 6 }} />Indexed Successfully</>}
             </h2>
           </div>
-          <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {result.title && <p style={{ margin: 0, fontWeight: 600 }}>{result.title}</p>}
 
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
+            <div className={styles.resultMetaRow}>
               <span>Type: <strong>{result.source_type.toUpperCase()}</strong></span>
               <span>Prediction: <strong>{result.prediction}</strong></span>
-              <span>Risk: <strong style={{ color: riskColor(result.risk_level) }}>{result.risk_level}</strong></span>
+              <span>Risk: <span className={riskClass(result.risk_level)}>{result.risk_level}</span></span>
             </div>
 
             {!result.is_malicious && result.tags.length > 0 && (
@@ -212,7 +194,7 @@ export function UploadPage() {
             )}
 
             {result.flags.length > 0 && (
-              <div style={{ fontSize: '0.8rem', color: '#f97316' }}>
+              <div className={styles.flagsNote}>
                 Flags: {result.flags.join(', ')}
               </div>
             )}

@@ -28,6 +28,11 @@ class Document(Base):
     vt_stats = Column(JSONB, nullable=True)         # VirusTotal stats dict
     flags = Column(JSONB, default=list)             # PDF suspicious flags
 
+    # On-disk path to the stored PDF file, only set for safe PDFs — never
+    # populated for malicious uploads (those are deleted immediately after
+    # scanning, never written to permanent storage). NULL for link items.
+    file_path = Column(String, nullable=True)
+
     # Soft delete / trash
     is_deleted = Column(Boolean, default=False, nullable=False, index=True)
     deleted_at = Column(DateTime, nullable=True)
