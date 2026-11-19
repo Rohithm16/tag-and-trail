@@ -1,5 +1,5 @@
-"""Tag & Trail Categorisation Engine
-NLP pipeline: POS tagging → SBERT scoring → MMR diversification.
+﻿"""Tag & Trail Categorisation Engine
+NLP pipeline: POS tagging â†’ SBERT scoring â†’ MMR diversification.
 Uses PostgreSQL (TagMemory table) instead of MongoDB for IDF memory.
 """
 import math
@@ -16,11 +16,11 @@ from spellchecker import SpellChecker
 
 spell = SpellChecker()
 
-# ── NLP models (loaded once at import time) ────────────────────────────────────
+# â”€â”€ NLP models (loaded once at import time) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 nlp = spacy.load("en_core_web_sm", disable=["ner"])
-embedder = SentenceTransformer("all-mpnet-base-v2")
+embedder = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
 
-# ── Constants ──────────────────────────────────────────────────────────────────
+# â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 MIN_BLOCKLIST = {
     "introduction", "abstract", "summary", "conclusion", "discussion",
     "results", "method", "methods", "analysis", "evaluation", "experiment",
@@ -38,7 +38,7 @@ TECH_PATTERNS = [
 ]
 
 
-# ── PostgreSQL tag-memory helpers ──────────────────────────────────────────────
+# â”€â”€ PostgreSQL tag-memory helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def prune_tag_memory(db, days_old: int = 30):
     """Delete stale tag entries so the engine forgets old habits."""
@@ -72,7 +72,7 @@ def update_df_counts(db, winning_tags: List[str]):
     db.commit()
 
 
-# ── Text preparation ───────────────────────────────────────────────────────────
+# â”€â”€ Text preparation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def dynamic_tech_shield(text: str):
     """Replace technical tokens (e.g. Node.js, C++) with placeholders so SpaCy doesn't split them."""
@@ -89,7 +89,7 @@ def dynamic_tech_shield(text: str):
 
 
 def clean_and_truncate_chunk(chunk) -> str | None:
-    """Clean a SpaCy noun chunk — remove stop words, determiners, bad tokens."""
+    """Clean a SpaCy noun chunk â€” remove stop words, determiners, bad tokens."""
     stop_pos = {"DET", "ADP", "CONJ", "CCONJ", "SCONJ", "PUNCT", "SPACE", "NUM"}
     words = [
         t.text.lower()
@@ -123,7 +123,7 @@ def clean_and_truncate_chunk(chunk) -> str | None:
     return text
 
 
-# ── Candidate pool ─────────────────────────────────────────────────────────────
+# â”€â”€ Candidate pool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def get_candidate_pool(raw_text: str) -> Counter:
     """Extract all valid noun-chunk n-grams from text."""
@@ -134,14 +134,14 @@ def get_candidate_pool(raw_text: str) -> Counter:
 
     # Word -> POS lookup built from the single full-document parse above.
     # Previously, every unigram candidate re-ran the whole spaCy pipeline
-    # via `nlp(ngram)` just to read its POS tag — one extra full parse per
+    # via `nlp(ngram)` just to read its POS tag â€” one extra full parse per
     # candidate word, on top of the document parse already done. That's
     # wasted work (and slows down every upload), so we reuse the tags
     # spaCy already assigned in the original document parse instead.
     # Note: this uses the word's in-context POS tag rather than an
     # isolated-word re-parse, which is generally the more reliable signal
     # anyway (spaCy's tagger depends on surrounding context), but it can
-    # shift a small number of borderline tags versus the old behavior —
+    # shift a small number of borderline tags versus the old behavior â€”
     # worth spot-checking against a few of your existing documents.
     word_pos: dict = {}
     for token in doc:
@@ -189,7 +189,7 @@ def get_candidate_pool(raw_text: str) -> Counter:
     return final_pool
 
 
-# ── Scoring ────────────────────────────────────────────────────────────────────
+# â”€â”€ Scoring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def score_candidates(candidate_pool: Counter, doc_text: str, title_text: str, df_counts: dict) -> list:
     candidates = list(candidate_pool.keys())
@@ -216,7 +216,7 @@ def score_candidates(candidate_pool: Counter, doc_text: str, title_text: str, df
     return sorted(scored, key=lambda x: x["score"], reverse=True)
 
 
-# ── MMR diversification ────────────────────────────────────────────────────────
+# â”€â”€ MMR diversification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def apply_mmr(scored_candidates: list, top_n: int = 4, diversity: float = 0.45) -> List[str]:
     if not scored_candidates:
@@ -254,7 +254,7 @@ def apply_mmr(scored_candidates: list, top_n: int = 4, diversity: float = 0.45) 
     return selected_tags
 
 
-# ── Public API ─────────────────────────────────────────────────────────────────
+# â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def generate_tags(title: str, text: str, db) -> List[str]:
     """
