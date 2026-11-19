@@ -31,3 +31,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Generated URL feature cache (not required for inference)
+backend/app/models/url_model/features_cache.pkl
